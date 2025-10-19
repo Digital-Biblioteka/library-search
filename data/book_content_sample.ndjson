@@ -1,0 +1,6 @@
+{ "index": { "_index": "book_content", "_id": "BOOK1-0001" } }
+{ "book_id": "BOOK1", "chunk_id": "BOOK1-0001", "chapter": "Chapter 1", "page": 1, "paragraph": 1, "char_start": 0, "char_end": 120, "text": "Call me Ishmael. Some years ago — never mind how long precisely — having little or no money..." }
+{ "index": { "_index": "book_content", "_id": "BOOK1-0002" } }
+{ "book_id": "BOOK1", "chunk_id": "BOOK1-0002", "chapter": "Chapter 1", "page": 2, "paragraph": 1, "char_start": 0, "char_end": 140, "text": "There is nothing surprising in this. If they but knew it, almost all men in their degree..." }
+{ "index": { "_index": "book_content", "_id": "BOOK2-0001" } }
+{ "book_id": "BOOK2", "chunk_id": "BOOK2-0001", "chapter": "Часть 1", "page": 1, "paragraph": 1, "char_start": 0, "char_end": 120, "text": "— Eh bien, mon prince, Gênes et Lucques ne sont plus que des apanages..." }

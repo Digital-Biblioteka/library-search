@@ -1,14 +1,23 @@
 {
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "chapter_index": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": ["lowercase","asciifolding"]
+        }
+      }
+    }
+  },
   "mappings": {
     "properties": {
       "book_id": { "type": "keyword" },
       "chunk_id": { "type": "keyword" },
-      "chapter": { "type": "keyword" },
-      "page": { "type": "integer" },
-      "paragraph": { "type": "integer" },
-      "char_start": { "type": "integer" },
-      "char_end": { "type": "integer" },
-      "text": { "type": "text", "analyzer": "standard" },
+      "chapter": { "type": "text" },
+      "chapter_index": { "type": "integer" },
+      "paragraph_index": { "type": "integer" },
+      "text": { "type": "text" },
       "text_vector": { "type": "dense_vector", "dims": 384, "index": true, "similarity": "cosine" }
     }
   }

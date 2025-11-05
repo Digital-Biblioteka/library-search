@@ -2,16 +2,15 @@
   "settings": {
     "analysis": {
       "analyzer": {
-        "ru_en_standard": { "type": "standard" },
-        "title_search": {
-          "type": "custom",
-          "tokenizer": "standard",
-          "filter": ["lowercase","asciifolding"]
-        },
         "title_index": {
           "type": "custom",
           "tokenizer": "standard",
           "filter": ["lowercase","asciifolding","edge_ngram_1_20"]
+        },
+        "title_search": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": ["lowercase","asciifolding"]
         }
       },
       "filter": {
@@ -22,6 +21,7 @@
   "mappings": {
     "properties": {
       "book_id": { "type": "keyword" },
+      "source_uid": { "type": "keyword" },
       "title": {
         "type": "text",
         "analyzer": "title_index",
@@ -30,15 +30,13 @@
           "raw": { "type": "keyword", "ignore_above": 256 }
         }
       },
-      "authors": { "type": "text", "analyzer": "title_index", "search_analyzer": "title_search" },
-      "genres": { "type": "keyword" },
-      "description": { "type": "text", "analyzer": "ru_en_standard" },
+      "author": { "type": "text", "analyzer": "title_index", "search_analyzer": "title_search" },
+      "publisher": { "type": "text", "analyzer": "title_index", "search_analyzer": "title_search" },
+      "description": { "type": "text" },
+      "genres": { "type": "text", "analyzer": "title_index", "search_analyzer": "title_search" },
+      "linkToBook": { "type": "keyword" },
       "language": { "type": "keyword" },
-      "year": { "type": "integer" },
-      "rating_avg": { "type": "float" },
-      "rating_count": { "type": "integer" },
-      "access_level": { "type": "keyword" },
-      "suggest": { "type": "completion" },
+      "suggest": { "type": "object", "enabled": true },
       "description_vector": { "type": "dense_vector", "dims": 384, "index": true, "similarity": "cosine" }
     }
   }

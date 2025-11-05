@@ -1,4 +1,0 @@
-{ "index": { "_index": "books", "_id": "BOOK1" } }
-{ "book_id": "BOOK1", "title": "Moby-Dick", "authors": ["Herman Melville"], "genres": ["classic", "adventure"], "description": "A novel about the voyage of the whaling ship Pequod and its captain Ahab.", "language": "en", "year": 1851, "rating_avg": 4.2, "rating_count": 1234, "access_level": "public", "suggest": { "input": ["Moby-Dick", "Moby Dick", "Melville"] } }
-{ "index": { "_index": "books", "_id": "BOOK2" } }
-{ "book_id": "BOOK2", "title": "Война и мир", "authors": ["Лев Толстой"], "genres": ["classic"], "description": "Роман о жизни русского общества во время наполеоновских войн.", "language": "ru", "year": 1869, "rating_avg": 4.7, "rating_count": 9876, "access_level": "public", "suggest": { "input": ["Война и мир", "Толстой"] } }

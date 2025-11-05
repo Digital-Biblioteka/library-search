@@ -1,0 +1,24 @@
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "chapter_index": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": ["lowercase","asciifolding"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "book_id": { "type": "keyword" },
+      "chunk_id": { "type": "keyword" },
+      "chapter": { "type": "text" },
+      "chapter_index": { "type": "integer" },
+      "paragraph_index": { "type": "integer" },
+      "text": { "type": "text" },
+      "text_vector": { "type": "dense_vector", "dims": 384, "index": true, "similarity": "cosine" }
+    }
+  }
+}

@@ -4,6 +4,7 @@ import os
 import re
 import hashlib
 import tempfile
+import io
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -223,7 +224,13 @@ def main():
                     data["linkToBook"] = f"s3://{raw_bucket}/{obj.object_name}"
                     json_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
                     out_key = f"{Path(obj.object_name).with_suffix('.json').name}"
-                    client.put_object(parsed_bucket, out_key, data=bytes(json_bytes), length=len(json_bytes))
+                    client.put_object(
+                        parsed_bucket,
+                        out_key,
+                        data=io.BytesIO(json_bytes),
+                        length=len(json_bytes),
+                        content_type="application/json",
+                    )
                     print(f"OK s3://{raw_bucket}/{obj.object_name} -> s3://{parsed_bucket}/{out_key}")
             except Exception as e:
                 print(f"ERROR s3://{raw_bucket}/{obj.object_name}: {e}")

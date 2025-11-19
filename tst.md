@@ -23,7 +23,6 @@ If you already have JSON in MinIO bucket `parsed`, skip to step 3
 python -m venv .venv-search
 .\.venv-search\Scripts\Activate.ps1
 pip install -r .\scripts\requirements.txt
-pip install minio
 ```
 4) Run ingest from MinIO to MinIO:
 ```bash
@@ -51,6 +50,11 @@ Outputs:
 - `ingest_out\books_out.ndjson`
 - `ingest_out\book_content_out.ndjson`
 
+Or, directly inside MinIO (no local files):
+```bash
+python .\scripts\pipeline.py json-to-ndjson-s3 --index-books "books" --index-content "book_content"
+```
+
 ## 5) Initialize indices and bulk load
 ```bash
 python .\scripts\escli.py init-indices --es http://localhost:9200
@@ -61,6 +65,12 @@ Verify:
 - `http://localhost:9200/books/_count`
 - `http://localhost:9200/book_content/_count`
 
+Or, bulk directly from MinIO:
+```bash
+$env:ES_URL="http://localhost:9200"
+python .\scripts\pipeline.py es-bulk-from-minio --es $env:ES_URL --books-key "books.ndjson" --content-key "book_content.ndjson"
+```
+
 ## 6) Create embeddings for kNN
 To use kNN later with a local model:
 ```bash
@@ -69,3 +79,11 @@ python .\scripts\escli.py embed-from-ndjson --es http://localhost:9200 ^
   .\ingest_out\book_content_out.ndjson ^
   --source-field text --target-field text_vector
 ```
+Or, create embeddings directly from MinIO NDJSON:
+```powershell
+python .\scripts\pipeline.py embed-from-minio `
+  --ndjson-key book_content.ndjson `
+  --source-field text `
+  --target-field text_vector `
+  --model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 `
+  --es http://localhost:9200

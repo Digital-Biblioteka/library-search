@@ -7,3 +7,5 @@ minio>=7.2.5
 ebooklib>=0.18
 beautifulsoup4>=4.12
 lxml>=4.9
+fastapi>=0.110
+uvicorn>=0.24

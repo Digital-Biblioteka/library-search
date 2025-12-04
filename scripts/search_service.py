@@ -21,7 +21,11 @@ app = FastAPI(title="Library Search Service", version="1.0")
 
 
 class SearchRequest(BaseModel):
-    query: str
+    query: str | None = None
+    title: str | None = None
+    author: str | None = None
+    genre: str | None = None
+    description: str | None = None
 
 
 class BookDoc(BaseModel):
@@ -34,7 +38,6 @@ class BookDoc(BaseModel):
     linkToBook: str | None = None
     source_uid: str | None = None
     isbn: str | None = None
-    score: float | None = None
 
 
 @app.get("/healthz")
@@ -85,23 +88,60 @@ def to_book_docs(es_body: Dict[str, Any]) -> List[BookDoc]:
     return out
 
 
-def bm25_top_n(query: str, size: int) -> List[BookDoc]:
+def bm25_top_n(req: SearchRequest, size: int) -> List[BookDoc]:
+    fields: List[str] = []
+    if req.title:
+        fields.append("title^4")
+    if req.author:
+        fields.append("author^3")
+    if req.genre:
+        fields.append("genres^2")
+    fields.append("description")
+
+    text_parts: List[str] = []
+    if req.title:
+        text_parts.append(req.title)
+    if req.author:
+        text_parts.append(req.author)
+    if req.genre:
+        text_parts.append(req.genre)
+    if req.description:
+        text_parts.append(req.description)
+    if req.query:
+        text_parts.append(req.query)
+
+    query_text = " ".join(text_parts).strip()
+
     body = {
         "from": 0,
         "size": size,
         "query": {
             "multi_match": {
-                "query": query,
-                "fields": ["title^3", "author^2", "description", "genres"]
+                "query": query_text,
+                "fields": fields,
             }
-        }
+        },
     }
     resp = es_post("books/_search", body)
     return to_book_docs(resp)
 
 
-def knn_top_n(query: str, k: int, num_candidates: int) -> List[BookDoc]:
-    vec = embed(query)
+def knn_top_n(req: SearchRequest, k: int, num_candidates: int) -> List[BookDoc]:
+    parts: List[str] = []
+    if req.title:
+        parts.append(f"Title: {req.title}")
+    if req.author:
+        parts.append(f"Author: {req.author}")
+    if req.genre:
+        parts.append(f"Genres: {req.genre}")
+    if req.description:
+        parts.append(f"Description: {req.description}")
+    if req.query:
+        parts.append(f"Query: {req.query}")
+
+    text = "; ".join(parts).strip() or (req.query or "")
+
+    vec = embed(text)
     body = {
         "knn": {
             "field": "description_vector",
@@ -144,12 +184,18 @@ def rrf_fuse(bm25: List[BookDoc], knn: List[BookDoc], k_rrf: int, top_n: int) ->
 
 @app.post("/search/books", response_model=List[BookDoc])
 def search_books(req: SearchRequest) -> List[BookDoc]:
-    q = req.query.strip() if req.query else ""
-    if not q:
+    has_any = any([
+        req.query,
+        req.title,
+        req.author,
+        req.genre,
+        req.description,
+    ])
+    if not has_any:
         return []
-    bm25 = bm25_top_n(q, BM25_SIZE)
+    bm25 = bm25_top_n(req, BM25_SIZE)
     try:
-        knn = knn_top_n(q, KNN_K, KNN_NUM_CANDIDATES)
+        knn = knn_top_n(req, KNN_K, KNN_NUM_CANDIDATES)
     except HTTPException:
         log.warning("Embed/knn failed; fallback to BM25 only")
         knn = []

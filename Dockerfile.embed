@@ -1,0 +1,22 @@
+FROM python:3.11-slim
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY scripts/requirements.txt /app/scripts/requirements.txt
+
+ENV PIP_NO_CACHE_DIR=1
+RUN pip install --upgrade pip \
+    && pip install --prefer-binary -r /app/scripts/requirements.txt
+
+COPY scripts/ /app/scripts/
+
+ENV EMBED_MODEL="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+ENV TRANSFORMERS_CACHE=/root/.cache/huggingface
+ENV HF_HOME=/root/.cache/huggingface
+
+EXPOSE 8000
+CMD ["uvicorn", "scripts.embed_service:app", "--host", "0.0.0.0", "--port", "8000"]

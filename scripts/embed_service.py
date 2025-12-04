@@ -53,6 +53,11 @@ async def health() -> Dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/healthz")
+async def healthz() -> Dict[str, str]:
+    return {"status": "ok"}
+
+
 @app.post("/embed")
 async def embed(req: EmbedRequest) -> Dict[str, Any]:
     text = (req.text or "").strip()

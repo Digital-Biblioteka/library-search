@@ -68,6 +68,10 @@ services:
       - ES_URL=http://elasticsearch:9200
       - EMBED_URL=http://embed:8000/embed
       - PORT=8001
+      - MINIO_ENDPOINT=host.docker.internal:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - RAW_BUCKET=raw
     command: >
       sh -c "pip install --no-cache-dir --prefer-binary -r scripts/requirements.txt && \
              uvicorn scripts.search_service:app --host 0.0.0.0 --port 8001"

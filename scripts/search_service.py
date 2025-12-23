@@ -1,10 +1,14 @@
 import os
 import logging
+import tempfile
+from pathlib import Path
 from typing import List, Dict, Any
 
 import requests
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from minio import Minio
+from ingest.epub_to_json import read_epub
 
 ES_URL = os.getenv("ES_URL", "http://localhost:9200")
 EMBED_URL = os.getenv("EMBED_URL", "http://localhost:8000/embed")
@@ -37,6 +41,17 @@ class BookDoc(BaseModel):
     genres: str | None = None
     linkToBook: str | None = None
     source_uid: str | None = None
+    isbn: str | None = None
+
+
+class IndexBookRequest(BaseModel):
+    book_id: int
+    title: str | None = None
+    author: str | None = None
+    publisher: str | None = None
+    description: str | None = None
+    genres: str | None = None
+    linkToBook: str | None = None
     isbn: str | None = None
 
 
@@ -180,6 +195,117 @@ def rrf_fuse(bm25: List[BookDoc], knn: List[BookDoc], k_rrf: int, top_n: int) ->
     if not out:
         out = bm25[:top_n]
     return out
+
+
+def _minio_client() -> Minio:
+    endpoint = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+    access_key = os.getenv("MINIO_ACCESS_KEY") or os.getenv("INGEST_USER") or "minioadmin"
+    secret_key = os.getenv("MINIO_SECRET_KEY") or os.getenv("INGEST_PASSWORD") or "minioadmin"
+    secure = os.getenv("MINIO_SECURE", "false").lower() == "true"
+    return Minio(endpoint, access_key=access_key, secret_key=secret_key, secure=secure)
+
+
+@app.post("/index/book")
+def index_book(req: IndexBookRequest) -> Dict[str, Any]:
+    """Индексировать книгу по её EPUB в MinIO.
+
+    1. Скачиваем EPUB из RAW_BUCKET по linkToBook (или s3://bucket/key).
+    2. Разбираем через read_epub -> получаем главы и метаданные.
+    3. Формируем документ для индекса books и вектор описания.
+    """
+
+    raw_bucket = os.getenv("RAW_BUCKET", "raw")
+    link = req.linkToBook or ""
+
+    bucket = raw_bucket
+    object_name = link
+    if link.startswith("s3://"):
+        # формат s3://bucket/key
+        rest = link[len("s3://"):]
+        parts = rest.split("/", 1)
+        if len(parts) == 2:
+            bucket, object_name = parts[0], parts[1]
+
+    if not object_name:
+        raise HTTPException(status_code=400, detail="linkToBook is required for indexing")
+
+    client = _minio_client()
+
+    # Скачиваем EPUB во временный файл и парсим его
+    with tempfile.TemporaryDirectory() as td:
+        tmp_path = Path(td) / Path(object_name).name
+        resp = client.get_object(bucket, object_name)
+        try:
+            with tmp_path.open("wb") as w:
+                for chunk in resp.stream(32 * 1024):
+                    w.write(chunk)
+        finally:
+            resp.close()
+            resp.release_conn()
+
+        data = read_epub(tmp_path)
+
+    # Переписываем/дополняем метаданные данными из Java
+    data["book_id"] = str(req.book_id)
+    if req.title:
+        data["title"] = req.title
+    if req.author:
+        data["author"] = req.author
+    if req.publisher:
+        data["publisher"] = req.publisher
+    if req.description:
+        data["description"] = req.description
+    if req.genres:
+        data["genres"] = req.genres
+    if req.isbn:
+        data["isbn"] = req.isbn
+
+    data["linkToBook"] = f"s3://{bucket}/{object_name}"
+
+    # Текст для эмбеддинга: описание + первые параграфы
+    text_parts: List[str] = []
+    if "title" in data and data["title"]:
+        text_parts.append(str(data["title"]))
+    if "author" in data and data["author"]:
+        text_parts.append(str(data["author"]))
+    if "genres" in data and data["genres"]:
+        text_parts.append(str(data["genres"]))
+    if "description" in data and data["description"]:
+        text_parts.append(str(data["description"]))
+
+    # Добавим немного содержимого книги, если есть главы
+    chapters = data.get("chapters") or []
+    sample_paragraphs: List[str] = []
+    for ch in chapters[:5]:
+        paras = ch.get("paragraphs") or []
+        sample_paragraphs.extend(paras[:20])
+    if sample_paragraphs:
+        text_parts.append("\n".join(sample_paragraphs))
+
+    text = "\n\n".join([t for t in text_parts if t]).strip()
+
+    vec: List[float] = []
+    if text:
+        vec = embed(text)
+
+    doc: Dict[str, Any] = {
+        "book_id": data.get("book_id"),
+        "title": data.get("title", ""),
+        "author": data.get("author", ""),
+        "publisher": data.get("publisher", ""),
+        "description": data.get("description", ""),
+        "genres": data.get("genres", ""),
+        "linkToBook": data.get("linkToBook", ""),
+        "source_uid": data.get("source_uid"),
+        "isbn": data.get("isbn", ""),
+    }
+
+    if vec:
+        doc["description_vector"] = vec
+
+    path = f"books/_doc/{data['book_id']}"
+    es_post(path, doc)
+    return {"status": "ok"}
 
 
 @app.post("/search/books", response_model=List[BookDoc])

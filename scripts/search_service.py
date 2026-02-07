@@ -1,6 +1,8 @@
 import os
+import json
 import logging
 import tempfile
+import time
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -20,6 +22,9 @@ TOP_N = int(os.getenv("TOP_N", "20"))
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("search_service")
+
+ROOT = Path(__file__).resolve().parents[1]
+MAP_DIR = ROOT / "mappings"
 
 app = FastAPI(title="Library Search Service", version="1.0")
 
@@ -58,6 +63,57 @@ class IndexBookRequest(BaseModel):
 @app.get("/healthz")
 def healthz() -> Dict[str, str]:
     return {"status": "ok"}
+
+
+def _es_index_exists(name: str) -> bool:
+    url = f"{ES_URL.rstrip('/')}/{name}"
+    try:
+        r = requests.get(url, timeout=10)
+        return r.status_code == 200
+    except Exception:
+        return False
+
+
+def _es_put(path: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    url = f"{ES_URL.rstrip('/')}/{path.lstrip('/')}"
+    resp = requests.put(url, json=body, timeout=30)
+    if resp.status_code >= 400:
+        raise RuntimeError(f"ES PUT {path} failed: {resp.status_code} {resp.text}")
+    if not resp.text:
+        return {}
+    return resp.json()
+
+
+def _init_indices() -> None:
+    indices = [
+        ("books", MAP_DIR / "books.json"),
+        ("book_content", MAP_DIR / "book_content.json"),
+    ]
+
+    deadline = time.time() + 120
+    last_err: Exception | None = None
+    while time.time() < deadline:
+        try:
+            r = requests.get(ES_URL, timeout=5)
+            if r.status_code < 500:
+                break
+        except Exception as e:
+            last_err = e
+        time.sleep(2)
+    else:
+        raise RuntimeError(f"Elasticsearch not reachable at {ES_URL}: {last_err}")
+
+    for name, mapping_path in indices:
+        if _es_index_exists(name):
+            continue
+        body = json.loads(mapping_path.read_text(encoding="utf-8"))
+        _es_put(name, body)
+        log.info("Created Elasticsearch index: %s", name)
+
+
+@app.on_event("startup")
+def _on_startup() -> None:
+    _init_indices()
 
 
 def es_post(path: str, body: Dict[str, Any]) -> Dict[str, Any]:

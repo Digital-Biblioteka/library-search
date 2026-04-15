@@ -48,6 +48,11 @@ def _get_embedder() -> Embedder:
     return _embedder
 
 
+@app.on_event("startup")
+def _on_startup() -> None:
+    _get_embedder()
+
+
 @app.get("/health")
 async def health() -> Dict[str, str]:
     return {"status": "ok"}
@@ -55,6 +60,8 @@ async def health() -> Dict[str, str]:
 
 @app.get("/healthz")
 async def healthz() -> Dict[str, str]:
+    if _embedder is None:
+        raise HTTPException(status_code=503, detail="model not loaded yet")
     return {"status": "ok"}
 
 

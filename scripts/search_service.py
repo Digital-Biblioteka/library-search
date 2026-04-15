@@ -364,6 +364,22 @@ def index_book(req: IndexBookRequest) -> Dict[str, Any]:
     return {"status": "ok"}
 
 
+@app.delete("/index/book/{book_id}")
+def delete_book(book_id: int) -> Dict[str, Any]:
+    url = f"{ES_URL.rstrip('/')}/books/_doc/{book_id}"
+    try:
+        r = requests.delete(url, timeout=10)
+        if r.status_code == 404:
+            return {"status": "not_found"}
+        if r.status_code >= 400:
+            raise HTTPException(status_code=502, detail=f"ES DELETE failed: {r.status_code} {r.text}")
+        return {"status": "ok"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"ES DELETE failed: {e}")
+
+
 @app.post("/search/books", response_model=List[BookDoc])
 def search_books(req: SearchRequest) -> List[BookDoc]:
     has_any = any([

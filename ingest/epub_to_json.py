@@ -139,13 +139,19 @@ def read_epub(epub_path: Path) -> Dict:
         except Exception:
             pass
 
+    spine_map = {}
+    for idx, (item_id, linear) in enumerate(book.spine):
+        spine_map[item_id] = idx
+
     for item in book.get_items():
         if item.get_type() == ITEM_DOCUMENT:
             chapter, texts = extract_texts_from_item(item)
             if texts:
+                spine_idx = spine_map.get(item.get_id(), -1)
                 data["chapters"].append({
                     "chapter": chapter,
                     "paragraphs": texts,
+                    "spine_index": spine_idx,
                 })
 
     if not data.get("description"):

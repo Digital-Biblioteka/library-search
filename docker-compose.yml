@@ -28,6 +28,71 @@ services:
     ports:
       - "5601:5601"
 
+  embed:
+    build:
+      context: ../library-search
+      dockerfile: Dockerfile.embed
+    container_name: embed-dev
+    working_dir: /app
+    volumes:
+      - ../library-search:/app
+      - hf-cache:/root/.cache/huggingface
+      - pip-cache:/root/.cache/pip
+    env_file:
+      - ../library-search/library-search.env
+    environment:
+      - EMBED_MODEL
+      - TRANSFORMERS_CACHE=/root/.cache/huggingface
+      - HF_HOME=/root/.cache/huggingface
+    ports:
+      - "8000:8000"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20m
+
+  search-python:
+    image: python:3.11-slim
+    container_name: search-python-dev
+    working_dir: /app
+    volumes:
+      - ../library-search:/app
+    env_file:
+      - ../library-search/library-search.env
+    environment:
+      - ES_URL=http://elasticsearch:9200
+      - EMBED_URL=http://embed:8000/embed
+      - PORT=8001
+      - MINIO_ENDPOINT=host.docker.internal:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - RAW_BUCKET=raw
+    command: >
+      sh -c "pip install --no-cache-dir --prefer-binary -r scripts/requirements.txt && \
+             uvicorn scripts.search_service:app --host 0.0.0.0 --port 8001"
+    ports:
+      - "8001:8001"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      embed:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; urllib.request.urlopen('http://localhost:8001/healthz'); print('ok')\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 3m
+
 volumes:
   esdata:
+    driver: local
+  hf-cache:
+    driver: local
+  pip-cache:
     driver: local

@@ -1,8 +1,4 @@
 requests
-sentence-transformers>=2.2.2
-torch
-numpy
-tqdm
 minio>=7.2.5
 ebooklib>=0.18
 beautifulsoup4>=4.12

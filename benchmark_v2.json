@@ -1,0 +1,692 @@
+[
+    {
+        "id": "cross-ru-en-01",
+        "category": "cross-lingual-ru-en",
+        "query": "преступление и наказание",
+        "expectedBookIds": [20, 68],
+        "expectedTitleContains": ["Преступление и наказание", "Crime and Punishment"],
+        "minExpectedResults": 2,
+        "description": "Cross-lingual: Russian query finds Russian (20) and English (68) versions of Crime and Punishment",
+        "relevanceMap": {
+            "bookIds": [20, 68],
+            "relevanceScores": [2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "cross-ru-en-02",
+        "category": "cross-lingual-ru-en",
+        "query": "война и мир",
+        "expectedBookIds": [69],
+        "expectedTitleContains": ["War and Peace"],
+        "minExpectedResults": 1,
+        "description": "Cross-lingual: Russian query 'war and peace' finds English War and Peace (69)",
+        "relevanceMap": {
+            "bookIds": [69],
+            "relevanceScores": [2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "cross-ru-en-03",
+        "category": "cross-lingual-ru-en",
+        "query": "анна каренина",
+        "expectedBookIds": [44, 59],
+        "expectedTitleContains": ["Анна Каренина", "Anna Karenina"],
+        "minExpectedResults": 2,
+        "description": "Cross-lingual: Russian query finds Russian (44) and English (59) Anna Karenina",
+        "relevanceMap": {
+            "bookIds": [44, 59],
+            "relevanceScores": [2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "cross-ru-en-04",
+        "category": "cross-lingual-ru-en",
+        "query": "братья карамазовы",
+        "expectedBookIds": [17, 71],
+        "expectedTitleContains": ["Братья Карамазовы", "The Brothers Karamazov"],
+        "minExpectedResults": 2,
+        "description": "Cross-lingual: Russian query finds Russian (17) and English (71) Brothers Karamazov",
+        "relevanceMap": {
+            "bookIds": [17, 71],
+            "relevanceScores": [2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "cross-ru-en-05",
+        "category": "cross-lingual-ru-en",
+        "query": "идиот",
+        "expectedBookIds": [18, 70],
+        "expectedTitleContains": ["Идиот", "The Idiot"],
+        "minExpectedResults": 2,
+        "description": "Cross-lingual: Russian query finds Russian (18) and English (70) The Idiot",
+        "relevanceMap": {
+            "bookIds": [18, 70],
+            "relevanceScores": [2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "cross-ru-en-06",
+        "category": "cross-lingual-ru-en",
+        "query": "мертвые души",
+        "expectedBookIds": [22, 49],
+        "expectedTitleContains": ["Мертвые души", "Dead Souls"],
+        "minExpectedResults": 2,
+        "description": "Cross-lingual: Russian query finds Russian (22) and English (49) Dead Souls",
+        "relevanceMap": {
+            "bookIds": [22, 49],
+            "relevanceScores": [2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "cross-ru-en-07",
+        "category": "cross-lingual-ru-en",
+        "query": "отцы и дети",
+        "expectedBookIds": [73],
+        "expectedTitleContains": ["Fathers and Children"],
+        "minExpectedResults": 1,
+        "description": "Cross-lingual: Russian query finds English Fathers and Children (73)",
+        "relevanceMap": {
+            "bookIds": [73],
+            "relevanceScores": [2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "cross-ru-en-08",
+        "category": "cross-lingual-ru-en",
+        "query": "тарас бульба",
+        "expectedBookIds": [51, 104, 112],
+        "expectedTitleContains": ["Taras Bulba", "Расшифрованный Гоголь"],
+        "minExpectedResults": 1,
+        "description": "Cross-lingual: Russian query finds Taras Bulba (51) and books with Тарас Бульба in title (104, 112)",
+        "relevanceMap": {
+            "bookIds": [51, 104, 112],
+            "relevanceScores": [2, 1, 1]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "cross-en-ru-01",
+        "category": "cross-lingual-en-ru",
+        "query": "crime and punishment",
+        "expectedBookIds": [68, 20],
+        "expectedTitleContains": ["Crime and Punishment", "Преступление и наказание"],
+        "minExpectedResults": 2,
+        "description": "Cross-lingual: English query finds English (68) and Russian (20) Crime and Punishment",
+        "relevanceMap": {
+            "bookIds": [68, 20],
+            "relevanceScores": [2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "cross-en-ru-02",
+        "category": "cross-lingual-en-ru",
+        "query": "war and peace",
+        "expectedBookIds": [69],
+        "expectedTitleContains": ["War and Peace"],
+        "minExpectedResults": 1,
+        "description": "Cross-lingual: English query finds English War and Peace (69)",
+        "relevanceMap": {
+            "bookIds": [69],
+            "relevanceScores": [2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "cross-en-ru-03",
+        "category": "cross-lingual-en-ru",
+        "query": "anna karenina",
+        "expectedBookIds": [59, 44],
+        "expectedTitleContains": ["Anna Karenina", "Анна Каренина"],
+        "minExpectedResults": 2,
+        "description": "Cross-lingual: English query finds English (59) and Russian (44) Anna Karenina",
+        "relevanceMap": {
+            "bookIds": [59, 44],
+            "relevanceScores": [2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "cross-en-ru-04",
+        "category": "cross-lingual-en-ru",
+        "query": "the brothers karamazov",
+        "expectedBookIds": [71, 17],
+        "expectedTitleContains": ["The Brothers Karamazov", "Братья Карамазовы"],
+        "minExpectedResults": 2,
+        "description": "Cross-lingual: English query finds English (71) and Russian (17) Brothers Karamazov",
+        "relevanceMap": {
+            "bookIds": [71, 17],
+            "relevanceScores": [2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "cross-en-ru-05",
+        "category": "cross-lingual-en-ru",
+        "query": "the idiot",
+        "expectedBookIds": [70, 18],
+        "expectedTitleContains": ["The Idiot", "Идиот"],
+       "minExpectedResults": 2,
+        "description": "Cross-lingual: English query finds English (70) and Russian (18) The Idiot",
+        "relevanceMap": {
+            "bookIds": [70, 18],
+            "relevanceScores": [2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "semantic-same-01",
+        "category": "semantic-same-language",
+        "query": "про любовь",
+        "expectedBookIds": [44, 33, 85, 106],
+        "expectedTitleContains": ["Анна Каренина", "Гордость", "First love", "Первая любовь"],
+        "minExpectedResults": 2,
+        "description": "Semantic: 'about love' should find romance-themed books in Russian and English",
+        "relevanceMap": {
+            "bookIds": [44, 33, 85, 106],
+            "relevanceScores": [2, 2, 2, 1]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "semantic-same-02",
+        "category": "semantic-same-language",
+        "query": "revenge ambition power ambition",
+        "expectedBookIds": [16, 96, 21, 87],
+        "expectedTitleContains": ["Бесы", "The possessed", "Notes from the Underground", "Записки из подполья"],
+        "minExpectedResults": 2,
+        "description": "Semantic: themes of power and ambition should find The Possessed / Demons and Notes from Underground",
+        "relevanceMap": {
+            "bookIds": [16, 96, 21, 87],
+            "relevanceScores": [2, 2, 1, 1]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "semantic-same-03",
+        "category": "semantic-same-language",
+        "query": "превращение человека в насекомое",
+        "expectedBookIds": [27, 81],
+        "expectedTitleContains": ["Превращение", "Metamorphosis"],
+        "minExpectedResults": 2,
+        "description": "Semantic: 'transformation into insect' should find Kafka's Metamorphosis in RU (27) and EN (81)",
+        "relevanceMap": {
+            "bookIds": [27, 81],
+            "relevanceScores": [2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "semantic-same-04",
+        "category": "semantic-same-language",
+        "query": "путешествия и приключения",
+        "expectedBookIds": [43, 12, 41, 89, 91, 52, 93, 94, 30],
+        "expectedTitleContains": ["Путешествия Гулливера", "Робинзон Крузо", "Остров сокровищ", "Gulliver", "Robinson Crusoe", "Treasure Island", "Tom Sawyer", "Huckleberry Finn", "Зов предков"],
+        "minExpectedResults": 3,
+        "description": "Semantic: 'travel and adventures' should find adventure books across languages",
+        "relevanceMap": {
+            "bookIds": [43, 12, 41, 89, 91, 52, 93, 94, 30],
+            "relevanceScores": [2, 2, 2, 2, 2, 2, 2, 2, 1]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "semantic-same-05",
+        "category": "semantic-same-language",
+        "query": "children growing up",
+        "expectedBookIds": [93, 94, 80, 64, 46, 32],
+        "expectedTitleContains": ["Tom Sawyer", "Huckleberry Finn", "Little Women", "Childhood", "Детство", "Маленькие женщины"],
+        "minExpectedResults": 3,
+        "description": "Semantic: 'children growing up' should find coming-of-age stories",
+        "relevanceMap": {
+            "bookIds": [93, 94, 80, 64, 46, 32],
+            "relevanceScores": [2, 2, 2, 2, 2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "semantic-same-06",
+        "category": "semantic-same-language",
+        "query": "готический роман ужасы",
+        "expectedBookIds": [40, 42, 9, 97, 75, 95],
+        "expectedTitleContains": ["Франкенштейн", "Дракула", "Грозовой перевал", "Frankenstein", "Dracula", "Wuthering Heights"],
+        "minExpectedResults": 3,
+        "description": "Semantic: 'gothic horror novel' should find Frankenstein, Dracula, Wuthering Heights",
+        "relevanceMap": {
+            "bookIds": [40, 42, 9, 97, 75, 95],
+            "relevanceScores": [2, 2, 1, 2, 2, 1]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "semantic-same-07",
+        "category": "semantic-same-language",
+        "query": "love marriage society",
+        "expectedBookIds": [33, 44, 56, 59],
+        "expectedTitleContains": ["Гордость и Предубеждение", "Анна Каренина", "Pride and Prejudice", "Anna Karenina"],
+        "minExpectedResults": 2,
+        "description": "Semantic: 'love marriage society' should find romance/society novels like Pride and Prejudice and Anna Karenina",
+        "relevanceMap": {
+            "bookIds": [33, 44, 56, 59],
+            "relevanceScores": [2, 2, 2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "semantic-same-08",
+        "category": "semantic-same-language",
+        "query": "смерть и страдание",
+        "expectedBookIds": [47, 20, 68],
+        "expectedTitleContains": ["Смерть Ивана Ильича", "Преступление и наказание", "Crime and Punishment"],
+        "minExpectedResults": 2,
+        "description": "Semantic: 'death and suffering' should find Death of Ivan Ilyich and Crime and Punishment",
+        "relevanceMap": {
+            "bookIds": [47, 20, 68],
+            "relevanceScores": [2, 2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "bm25-title-01",
+        "category": "bm25-title-exact",
+        "query": "война",
+        "expectedBookIds": [69],
+        "expectedTitleContains": ["War and Peace"],
+        "minExpectedResults": 1,
+        "description": "BM25 exact: 'война' should match War and Peace title",
+        "relevanceMap": {
+            "bookIds": [69],
+            "relevanceScores": [2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-title-02",
+        "category": "bm25-title-exact",
+        "query": "преступление",
+        "expectedBookIds": [20, 68],
+        "expectedTitleContains": ["Преступление и наказание", "Crime and Punishment"],
+        "minExpectedResults": 2,
+        "description": "BM25 exact: 'преступление' should match Russian and English Crime and Punishment",
+        "relevanceMap": {
+            "bookIds": [20, 68],
+            "relevanceScores": [2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-title-03",
+        "category": "bm25-title-exact",
+        "query": "love",
+        "expectedBookIds": [56, 85, 106],
+        "expectedTitleContains": ["Pride and Prejudice", "First love", "Первая любовь"],
+        "minExpectedResults": 2,
+        "description": "BM25 exact: 'love' should match Pride and Prejudice (56), First love (85), Первая любовь (106)",
+        "relevanceMap": {
+            "bookIds": [56, 85, 106],
+            "relevanceScores": [1, 2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-title-04",
+        "category": "bm25-title-exact",
+        "query": "alice",
+        "expectedBookIds": [28, 72],
+        "expectedTitleContains": ["Алиса в Стране чудес", "Alice"],
+        "minExpectedResults": 2,
+        "description": "BM25 exact: 'alice' should find Alice in Wonderland in RU (28) and EN (72)",
+        "relevanceMap": {
+            "bookIds": [28, 72],
+            "relevanceScores": [2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-title-05",
+        "category": "bm25-title-exact",
+        "query": "garden",
+        "expectedBookIds": [7, 50],
+        "expectedTitleContains": ["Таинственный сад", "The Secret Garden"],
+        "minExpectedResults": 2,
+        "description": "BM25 exact: 'garden' should find The Secret Garden in RU (7) and EN (50)",
+        "relevanceMap": {
+            "bookIds": [7, 50],
+            "relevanceScores": [2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-title-06",
+        "category": "bm25-title-exact",
+        "query": "детство",
+        "expectedBookIds": [46, 64],
+        "expectedTitleContains": ["Детство", "Childhood"],
+        "minExpectedResults": 2,
+        "description": "BM25 exact: 'детство' should find Childhood/Детство in RU (46) and EN (64)",
+        "relevanceMap": {
+            "bookIds": [46, 64],
+            "relevanceScores": [2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-author-01",
+        "category": "bm25-author",
+        "query": "Dostoevsky",
+        "expectedBookIds": [68, 70, 71, 87, 96],
+        "expectedTitleContains": ["Crime and Punishment", "The Idiot", "The Brothers Karamazov", "Notes from the Underground", "The possessed"],
+        "minExpectedResults": 4,
+        "description": "BM25 author: 'Dostoevsky' should find all English books by Dostoevsky",
+        "relevanceMap": {
+            "bookIds": [68, 70, 71, 87, 96],
+            "relevanceScores": [2, 2, 2, 2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-author-02",
+        "category": "bm25-author",
+        "query": "Тургенев",
+        "expectedBookIds": [109, 111],
+        "expectedTitleContains": ["Дневник лишнего человека", "Жид"],
+        "minExpectedResults": 2,
+        "description": "BM25 author: 'Тургенев' should find Russian books by Turgenev",
+        "relevanceMap": {
+            "bookIds": [109, 111],
+            "relevanceScores": [2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-author-03",
+        "category": "bm25-author",
+        "query": "Tolstoy",
+        "expectedBookIds": [59, 63, 64, 69, 88],
+        "expectedTitleContains": ["Anna Karenina", "Resurrection", "Childhood", "War and Peace", "Sebastopol"],
+        "minExpectedResults": 4,
+        "description": "BM25 author: 'Tolstoy' should find all English books by Tolstoy",
+        "relevanceMap": {
+            "bookIds": [59, 63, 64, 69, 88],
+            "relevanceScores": [2, 2, 2, 2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "review-search-01",
+        "category": "review-search",
+        "query": "великолепная книга",
+        "expectedBookIds": [7],
+        "expectedTitleContains": ["Таинственный сад"],
+        "minExpectedResults": 1,
+        "description": "Review search: 'великолепная книга' appears in review for Таинственный сад (7)",
+        "relevanceMap": {
+            "bookIds": [7],
+            "relevanceScores": [2]
+        },
+        "type": "review"
+    },
+    {
+        "id": "review-search-02",
+        "category": "review-search",
+        "query": "interesting",
+        "expectedBookIds": [18, 25, 28, 30],
+        "expectedTitleContains": ["Идиот", "Обломов", "Алиса в Стране чудес", "Зов предков"],
+        "minExpectedResults": 3,
+        "description": "Review search: 'interesting' appears in reviews for Идиот (18), Обломов (25), Алиса (28), Зов предков (30)",
+        "relevanceMap": {
+            "bookIds": [18, 25, 28, 30],
+            "relevanceScores": [2, 2, 2, 2]
+        },
+        "type": "review"
+    },
+    {
+        "id": "review-search-03",
+        "category": "review-search",
+        "query": "обязателен к прочтению",
+        "expectedBookIds": [20],
+        "expectedTitleContains": ["Преступление и наказание"],
+        "minExpectedResults": 1,
+        "description": "Review search: 'обязателен к прочтению' appears in review for Преступление и наказание (20)",
+        "relevanceMap": {
+            "bookIds": [20],
+            "relevanceScores": [2]
+        },
+        "type": "review"
+    },
+    {
+        "id": "content-search-01",
+        "category": "content-search",
+        "query": "It was the best of times",
+        "expectedBookIds": [14, 102],
+        "expectedTitleContains": ["Повесть о двух городах", "A Tale of Two Cities"],
+        "minExpectedResults": 1,
+        "description": "Content search: famous opening of A Tale of Two Cities should find it in RU (14) and EN (102)",
+        "relevanceMap": {
+            "bookIds": [14, 102],
+            "relevanceScores": [2, 2]
+        },
+        "type": "content"
+    },
+    {
+        "id": "content-search-02",
+        "category": "content-search",
+        "query": "to be or not to be",
+        "expectedBookIds": [4],
+        "expectedTitleContains": ["Poetry"],
+        "minExpectedResults": 1,
+        "description": "Content search: Shakespeare's 'to be or not to be' should find Shakespeare Poetry (4) if content is indexed",
+        "relevanceMap": {
+            "bookIds": [4],
+            "relevanceScores": [2]
+        },
+        "type": "content"
+    },
+    {
+        "id": "content-search-03",
+        "category": "content-search",
+        "query": "звёзды",
+        "expectedBookIds": [],
+        "expectedTitleContains": [],
+        "minExpectedResults": 0,
+        "description": "Content search: 'звёзды' may appear in book content of any Russian book — exploratory query",
+        "relevanceMap": {
+            "bookIds": [],
+            "relevanceScores": []
+        },
+        "type": "content"
+    },
+    {
+        "id": "filter-rating-01",
+        "category": "filter-rating",
+        "query": "crime",
+        "minRating": 4.0,
+        "expectedBookIds": [68, 20],
+        "expectedTitleContains": ["Crime and Punishment", "Преступление и наказание"],
+        "minExpectedResults": 1,
+        "description": "Filter: 'crime' with minRating=4 should find Cr and Punishment (ratings currently NULL, tests filter param presence)",
+        "relevanceMap": {
+            "bookIds": [68, 20],
+            "relevanceScores": [2, 2]
+        },
+        "type": "filter"
+    },
+    {
+        "id": "filter-rating-02",
+        "category": "filter-rating",
+        "query": "love",
+        "minRating": 3.0,
+        "expectedBookIds": [56, 85, 106],
+        "expectedTitleContains": ["Pride and Prejudice", "First love", "Первая любовь"],
+        "minExpectedResults": 1,
+        "description": "Filter: 'love' with minRating=3 (ratings NULL, tests text+filter combination)",
+        "relevanceMap": {
+            "bookIds": [56, 85, 106],
+            "relevanceScores": [2, 2, 2]
+        },
+        "type": "filter"
+    },
+    {
+        "id": "filter-rating-03",
+        "category": "filter-rating",
+        "query": "война",
+        "minRating": 4.0,
+        "expectedBookIds": [69],
+        "expectedTitleContains": ["War and Peace"],
+        "minExpectedResults": 1,
+        "description": "Filter: 'война' with minRating=4 (ratings NULL, tests RU query + filter)",
+        "relevanceMap": {
+            "bookIds": [69],
+            "relevanceScores": [2]
+        },
+        "type": "filter"
+    },
+    {
+        "id": "filter-rating-04",
+        "category": "filter-rating",
+        "query": "children",
+        "minRating": 3.0,
+        "expectedBookIds": [46, 64, 73, 80],
+        "expectedTitleContains": ["Детство", "Childhood", "Fathers and Children", "Little Women"],
+        "minExpectedResults": 2,
+        "description": "Filter: 'children' with minRating=3 should find various books with 'children' in title",
+        "relevanceMap": {
+            "bookIds": [46, 64, 73, 80],
+            "relevanceScores": [2, 2, 1, 1]
+        },
+        "type": "filter"
+    },
+    {
+        "id": "bm25-title-07",
+        "category": "bm25-title-exact",
+        "query": "robinson",
+        "expectedBookIds": [12, 91],
+        "expectedTitleContains": ["Робинзон Крузо", "Robinson Crusoe"],
+        "minExpectedResults": 2,
+        "description": "BM25 exact: 'robinson' should find Robinson Crusoe in RU (12) and EN (91)",
+        "relevanceMap": {
+            "bookIds": [12, 91],
+            "relevanceScores": [2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-title-08",
+        "category": "bm25-title-exact",
+        "query": "франкенштейн",
+        "expectedBookIds": [40, 97],
+        "expectedTitleContains": ["Франкенштейн", "Frankenstein"],
+        "minExpectedResults": 2,
+        "description": "BM25 exact: 'франкенштейн' should find Frankenstein in RU (40) and EN (97)",
+        "relevanceMap": {
+            "bookIds": [40, 97],
+            "relevanceScores": [2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "cross-ru-en-09",
+        "category": "cross-lingual-ru-en",
+        "query": "евгений онегин",
+        "expectedBookIds": [48, 67],
+        "expectedTitleContains": ["Евгений Онегин", "Eugene Onegin", "Eugene Oneguine"],
+        "minExpectedResults": 2,
+        "description": "Cross-lingual: Russian query finds Евгений Онегин (48) and Eugene Onegin (67)",
+        "relevanceMap": {
+            "bookIds": [48, 67],
+            "relevanceScores": [2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "cross-ru-en-10",
+        "category": "cross-lingual-ru-en",
+        "query": "капитанская дочка",
+        "expectedBookIds": [35, 58],
+        "expectedTitleContains": ["Капитанская дочка", "The Daughter of the Commandant"],
+        "minExpectedResults": 2,
+        "description": "Cross-lingual: Russian query finds Капитанская дочка (35) and English version (58)",
+        "relevanceMap": {
+            "bookIds": [35, 58],
+            "relevanceScores": [2, 2]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "semantic-same-09",
+        "category": "semantic-same-language",
+        "query": "одиночество и общество",
+        "expectedBookIds": [25, 82, 21, 87, 18, 70],
+        "expectedTitleContains": ["Обломов", "Oblomov", "Записки из подполья", "Notes from the Underground", "Идиот", "The Idiot"],
+        "minExpectedResults": 2,
+        "description": "Semantic: 'loneliness and society' should find Oblomov, Notes from Underground, The Idiot",
+        "relevanceMap": {
+            "bookIds": [25, 82, 21, 87, 18, 70],
+            "relevanceScores": [2, 2, 2, 2, 1, 1]
+        },
+        "type": "semantic"
+    },
+    {
+        "id": "bm25-author-04",
+        "category": "bm25-author",
+        "query": "Достоевский",
+        "expectedBookIds": [16, 17, 18, 20, 21],
+        "expectedTitleContains": ["Бесы", "Братья Карамазовы", "Идиот", "Преступление и наказание", "Записки из подполья"],
+        "minExpectedResults": 4,
+        "description": "BM25 author: 'Достоевский' should find all Russian books by Dostoevsky",
+        "relevanceMap": {
+            "bookIds": [16, 17, 18, 20, 21],
+            "relevanceScores": [2, 2, 2, 2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "review-search-04",
+        "category": "review-search",
+        "query": "шедевр",
+        "expectedBookIds": [8, 16, 17, 24, 27],
+        "expectedTitleContains": ["Джейн Эйр", "Бесы", "Братья Карамазовы", "Ревизор", "Превращение"],
+        "minExpectedResults": 3,
+        "description": "Review search: 'шедевр' appears in reviews for Джейн Эйр (8), Бесы (16), Братья Карамазовы (17), Ревизор (24), Превращение (27)",
+        "relevanceMap": {
+            "bookIds": [8, 16, 17, 24, 27],
+            "relevanceScores": [2, 2, 2, 2, 2]
+        },
+        "type": "review"
+    },
+    {
+        "id": "content-search-04",
+        "category": "content-search",
+        "query": "It is a truth universally acknowledged",
+        "expectedBookIds": [33, 56],
+        "expectedTitleContains": ["Гордость и Предубеждение", "Pride and Prejudice"],
+        "minExpectedResults": 1,
+        "description": "Content search: famous opening of Pride and Prejudice should find it in RU (33) and EN (56)",
+        "relevanceMap": {
+            "bookIds": [33, 56],
+            "relevanceScores": [2, 2]
+        },
+        "type": "content"
+    },
+    {
+        "id": "bm25-title-09",
+        "category": "bm25-title-exact",
+        "query": "dracula",
+        "expectedBookIds": [42, 75],
+        "expectedTitleContains": ["Дракула", "Dracula"],
+        "minExpectedResults": 2,
+        "description": "BM25 exact: 'dracula' should find Dracula in RU (42) and EN (75)",
+        "relevanceMap": {
+            "bookIds": [42, 75],
+            "relevanceScores": [2, 2]
+        },
+        "type": "bm25"
+    }
+]

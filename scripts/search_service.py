@@ -60,6 +60,24 @@ class IndexBookRequest(BaseModel):
     isbn: str | None = None
 
 
+class ContentSearchRequest(BaseModel):
+    query: str
+    book_id: str | None = None
+    size: int = 10
+
+
+class ContentSearchResult(BaseModel):
+    book_id: str
+    title: str = ""
+    author: str = ""
+    chapter: str = ""
+    chapter_index: int = 0
+    spine_index: int = -1
+    paragraph_index: int = 0
+    text_snippet: str = ""
+    score: float = 0.0
+
+
 @app.get("/healthz")
 def healthz() -> Dict[str, str]:
     return {"status": "ok"}
@@ -88,6 +106,7 @@ def _init_indices() -> None:
     indices = [
         ("books", MAP_DIR / "books.json"),
         ("book_content", MAP_DIR / "book_content.json"),
+        ("reviews", MAP_DIR / "reviews.json"),
     ]
 
     deadline = time.time() + 120
@@ -117,10 +136,40 @@ def _on_startup() -> None:
 
 
 def es_post(path: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    if not path.startswith("http"):
+        url = f"{ES_URL.rstrip('/')}/{path.lstrip('/')}"
+    else:
+        url = path
+    headers = {"Content-Type": "application/json"}
+    resp = requests.post(url, json=body, headers=headers, timeout=30)
+    if resp.status_code >= 400:
+        log.warning("Elasticsearch POST %s failed: %s %s", path, resp.status_code, resp.text)
+        raise HTTPException(status_code=502, detail=f"ES POST {path} failed: {resp.text}")
+    return resp.json()
     url = f"{ES_URL.rstrip('/')}/{path.lstrip('/')}"
     resp = requests.post(url, json=body, timeout=30)
     if resp.status_code >= 400:
         raise HTTPException(status_code=502, detail=f"ES POST {path} failed: {resp.status_code} {resp.text}")
+    return resp.json()
+
+
+def es_bulk(actions: list[tuple]) -> Dict[str, Any]:
+    if not actions:
+        return {}
+    lines: List[str] = []
+    for meta, src in actions:
+        lines.append(json.dumps(meta, ensure_ascii=False))
+        lines.append(json.dumps(src, ensure_ascii=False))
+    body = "\n".join(lines) + "\n"
+    url = f"{ES_URL.rstrip('/')}/_bulk"
+    resp = requests.post(
+        url,
+        data=body.encode("utf-8"),
+        headers={"Content-Type": "application/x-ndjson"},
+        timeout=120,
+    )
+    if resp.status_code >= 400:
+        raise HTTPException(status_code=502, detail=f"ES bulk failed: {resp.status_code} {resp.text[:500]}")
     return resp.json()
 
 
@@ -359,8 +408,47 @@ def index_book(req: IndexBookRequest) -> Dict[str, Any]:
     if vec:
         doc["description_vector"] = vec
 
+    suggest_input: List[str] = []
+    if data.get("title"):
+        suggest_input.append(str(data["title"]))
+    if data.get("author"):
+        suggest_input.append(str(data["author"]))
+    if suggest_input:
+        doc["suggest"] = {"input": suggest_input}
+
     path = f"books/_doc/{data['book_id']}"
     es_post(path, doc)
+
+    chapters = data.get("chapters") or []
+    if chapters:
+        bulk_actions: list[tuple] = []
+        seq = 0
+        for chapter_index, ch in enumerate(chapters):
+            chapter_name = ch.get("chapter", "")
+            paragraphs = ch.get("paragraphs") or []
+            for paragraph_index, para in enumerate(paragraphs):
+                if not para or not para.strip():
+                    continue
+                content_doc: Dict[str, Any] = {
+                    "book_id": str(req.book_id),
+                    "chunk_id": f"{req.book_id}-{seq:06d}",
+                    "chapter": chapter_name,
+                    "chapter_index": chapter_index,
+                    "spine_index": ch.get("spine_index", -1),
+                    "paragraph_index": paragraph_index,
+                    "text": para,
+                }
+                try:
+                    para_vec = embed(para[:1000])
+                    content_doc["text_vector"] = para_vec
+                except Exception:
+                    log.warning("Failed to embed paragraph %d of book %s", seq, req.book_id)
+                bulk_actions.append(({"index": {"_index": "book_content"}}, content_doc))
+                seq += 1
+        if bulk_actions:
+            es_bulk(bulk_actions)
+            log.info("Indexed %d paragraphs into book_content for book %s", seq, req.book_id)
+
     return {"status": "ok"}
 
 
@@ -373,11 +461,21 @@ def delete_book(book_id: int) -> Dict[str, Any]:
             return {"status": "not_found"}
         if r.status_code >= 400:
             raise HTTPException(status_code=502, detail=f"ES DELETE failed: {r.status_code} {r.text}")
-        return {"status": "ok"}
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"ES DELETE failed: {e}")
+
+    content_url = f"{ES_URL.rstrip('/')}/book_content/_delete_by_query"
+    content_body = {"query": {"term": {"book_id": str(book_id)}}}
+    try:
+        r = requests.post(content_url, json=content_body, timeout=30)
+        if r.status_code >= 400:
+            log.warning("Failed to delete book_content for book %s: %s", book_id, r.text)
+    except Exception as e:
+        log.warning("Failed to delete book_content for book %s: %s", book_id, e)
+
+    return {"status": "ok"}
 
 
 @app.post("/search/books", response_model=List[BookDoc])
@@ -398,6 +496,320 @@ def search_books(req: SearchRequest) -> List[BookDoc]:
         log.warning("Embed/knn failed; fallback to BM25 only")
         knn = []
     return rrf_fuse(bm25, knn, K_RRF, TOP_N)
+
+
+def _content_bm25(query: str, book_id: str | None, size: int) -> List[Dict[str, Any]]:
+    must: List[Dict[str, Any]] = [{"match": {"text": {"query": query}}}]
+    if book_id:
+        must.append({"term": {"book_id": book_id}})
+    body: Dict[str, Any] = {
+        "size": size,
+        "query": {"bool": {"must": must}},
+        "highlight": {
+            "fields": {
+                "text": {
+                    "fragment_size": 150,
+                    "number_of_fragments": 1,
+                }
+            }
+        },
+    }
+    resp = es_post("book_content/_search", body)
+    hits = resp.get("hits", {}).get("hits", [])
+    results: List[Dict[str, Any]] = []
+    for h in hits:
+        src = h.get("_source", {})
+        highlight = h.get("highlight", {})
+        text_snippet = (highlight.get("text") or [src.get("text", "")[:150]])[0]
+        results.append({
+            "book_id": src.get("book_id", ""),
+            "chapter": src.get("chapter", ""),
+            "chapter_index": src.get("chapter_index", 0),
+            "spine_index": src.get("spine_index", -1),
+            "paragraph_index": src.get("paragraph_index", 0),
+            "text_snippet": text_snippet,
+            "score": float(h.get("_score", 0)),
+        })
+    return results
+
+
+def _content_knn(query: str, book_id: str | None, k: int, num_candidates: int) -> List[Dict[str, Any]]:
+    vec = embed(query)
+    knn_clause: Dict[str, Any] = {
+        "field": "text_vector",
+        "query_vector": vec,
+        "k": k,
+        "num_candidates": max(100, num_candidates),
+    }
+    if book_id:
+        knn_clause["filter"] = [{"term": {"book_id": book_id}}]
+    body = {"size": k, "knn": knn_clause}
+    resp = es_post("book_content/_search", body)
+    hits = resp.get("hits", {}).get("hits", [])
+    results: List[Dict[str, Any]] = []
+    for h in hits:
+        src = h.get("_source", {})
+        results.append({
+            "book_id": src.get("book_id", ""),
+            "chapter": src.get("chapter", ""),
+            "chapter_index": src.get("chapter_index", 0),
+            "spine_index": src.get("spine_index", -1),
+            "paragraph_index": src.get("paragraph_index", 0),
+            "text_snippet": src.get("text", "")[:150],
+            "score": float(h.get("_score", 0)),
+        })
+    return results
+
+
+def _content_rrf(bm25: List[Dict], knn: List[Dict], k_rrf: int, top_n: int) -> List[Dict]:
+    by_key: Dict[str, Dict] = {}
+    r_bm25: Dict[str, int] = {}
+    r_knn: Dict[str, int] = {}
+    for i, r in enumerate(bm25):
+        key = f"{r['book_id']}_{r['chapter_index']}_{r['paragraph_index']}"
+        r_bm25.setdefault(key, i + 1)
+        by_key.setdefault(key, r)
+    for i, r in enumerate(knn):
+        key = f"{r['book_id']}_{r['chapter_index']}_{r['paragraph_index']}"
+        r_knn.setdefault(key, i + 1)
+        by_key.setdefault(key, r)
+    scores: Dict[str, float] = {}
+    for key in by_key:
+        rb = r_bm25.get(key, 10**9)
+        rk = r_knn.get(key, 10**9)
+        scores[key] = 1.0 / (k_rrf + rb) + 1.0 / (k_rrf + rk)
+    ordered = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
+    return [by_key[k] for k, _ in ordered[:top_n]]
+
+
+def _fetch_book_metadata(book_ids: List[str]) -> Dict[str, Dict[str, str]]:
+    if not book_ids:
+        return {}
+    url = f"{ES_URL.rstrip('/')}/books/_mget"
+    body = {"ids": list(set(book_ids))}
+    try:
+        resp = requests.get(url, json=body, timeout=10)
+        if resp.status_code >= 400:
+            return {}
+        docs = resp.json().get("docs", [])
+        result: Dict[str, Dict[str, str]] = {}
+        for doc in docs:
+            if doc.get("found"):
+                src = doc.get("_source", {})
+                bid = src.get("book_id") or doc.get("id")
+                result[str(bid)] = {
+                    "title": src.get("title", ""),
+                    "author": src.get("author", ""),
+                }
+        return result
+    except Exception:
+        return {}
+
+
+@app.post("/search/content", response_model=List[ContentSearchResult])
+def search_content(req: ContentSearchRequest) -> List[ContentSearchResult]:
+    if not req.query.strip():
+        return []
+    bm25 = _content_bm25(req.query, req.book_id, BM25_SIZE)
+    try:
+        knn = _content_knn(req.query, req.book_id, KNN_K, KNN_NUM_CANDIDATES)
+    except HTTPException:
+        log.warning("Embed/knn failed for content search; fallback to BM25 only")
+        knn = []
+    fused = _content_rrf(bm25, knn, K_RRF, req.size)
+    book_ids = [r["book_id"] for r in fused if r.get("book_id")]
+    meta = _fetch_book_metadata(book_ids)
+    results: List[ContentSearchResult] = []
+    for r in fused:
+        bid = r.get("book_id", "")
+        book_info = meta.get(bid, {})
+        results.append(ContentSearchResult(
+            book_id=bid,
+            title=book_info.get("title", ""),
+            author=book_info.get("author", ""),
+            chapter=r.get("chapter", ""),
+            chapter_index=r.get("chapter_index", 0),
+            spine_index=r.get("spine_index", -1),
+            paragraph_index=r.get("paragraph_index", 0),
+            text_snippet=r.get("text_snippet", ""),
+            score=r.get("score", 0.0),
+        ))
+    return results
+
+
+@app.post("/search/reviews")
+def search_reviews(req: ContentSearchRequest) -> List[Dict[str, Any]]:
+    if not req.query.strip():
+        return []
+    query = req.query.strip()
+
+    bm25_body: Dict[str, Any] = {
+        "size": req.size or 20,
+        "query": {"match": {"review_text": query}},
+    }
+    bm25_resp = es_post("reviews/_search", bm25_body)
+    bm25_hits = bm25_resp.get("hits", {}).get("hits", [])
+
+    bm25_results: List[Dict[str, Any]] = []
+    for h in bm25_hits:
+        src = h.get("_source", {})
+        bm25_results.append({
+            "book_id": src.get("book_id", ""),
+            "review_text": src.get("review_text", ""),
+            "score": float(h.get("_score", 0)),
+        })
+
+    knn_results: List[Dict[str, Any]] = []
+    try:
+        vec = embed(query)
+        knn_body: Dict[str, Any] = {
+            "size": req.size or 20,
+            "knn": {
+                "field": "review_text_vector",
+                "query_vector": vec,
+                "k": (req.size or 20),
+                "num_candidates": max(100, (req.size or 20) * 10),
+            }
+        }
+        knn_resp = es_post("reviews/_search", knn_body)
+        knn_hits = knn_resp.get("hits", {}).get("hits", [])
+        for h in knn_hits:
+            src = h.get("_source", {})
+            knn_results.append({
+                "book_id": src.get("book_id", ""),
+                "review_text": src.get("review_text", ""),
+                "score": float(h.get("_score", 0)),
+            })
+    except HTTPException:
+        log.warning("Embed/knn failed for review search; fallback to BM25 only")
+    except Exception as e:
+        log.warning("KNN failed for review search: %s", e)
+
+    if not knn_results:
+        return bm25_results
+
+    r_bm25: Dict[str, int] = {}
+    r_knn: Dict[str, int] = {}
+    all_book_ids: set = set()
+    for i, r in enumerate(bm25_results):
+        bid = r["book_id"]
+        r_bm25.setdefault(bid, i + 1)
+        all_book_ids.add(bid)
+    for i, r in enumerate(knn_results):
+        bid = r["book_id"]
+        r_knn.setdefault(bid, i + 1)
+        all_book_ids.add(bid)
+
+    scores: Dict[str, float] = {}
+    texts: Dict[str, List[str]] = {}
+    for bid in all_book_ids:
+        rb = r_bm25.get(bid, 10**9)
+        rk = r_knn.get(bid, 10**9)
+        scores[bid] = 1.0 / (60 + rb) + 1.0 / (60 + rk)
+        for r in bm25_results + knn_results:
+            if r["book_id"] == bid:
+                texts.setdefault(bid, []).append(r["review_text"])
+
+    ordered = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
+    results: List[Dict[str, Any]] = []
+    for bid, _ in ordered[: (req.size or 20)]:
+        results.append({
+            "book_id": bid,
+            "review_text": "\n---\n".join(texts.get(bid, [])),
+            "score": scores[bid],
+        })
+
+    if not results:
+        results = bm25_results[: (req.size or 20)]
+
+    return results
+
+
+@app.post("/index/reviews")
+def index_reviews(req: Dict[str, Any]) -> Dict[str, Any]:
+    reviews = req.get("reviews", [])
+    if not reviews:
+        return {"status": "ok", "indexed": 0}
+
+    if not _es_index_exists("reviews"):
+        mapping = json.loads((MAP_DIR / "reviews.json").read_text(encoding="utf-8"))
+        _es_put("reviews", mapping)
+        log.info("Created Elasticsearch index: reviews")
+
+    from elasticsearch import Elasticsearch, helpers
+    es_client = Elasticsearch(
+        ES_URL,
+        headers={"Accept": "application/vnd.elasticsearch+json; compatible-with=8"}
+    )
+
+    actions: list[Dict] = []
+    for rev in reviews:
+        doc = {
+            "review_id": rev.get("review_id"),
+            "book_id": str(rev.get("book_id", "")),
+            "user_id": rev.get("user_id"),
+            "rating": rev.get("rating", 0.0),
+            "review_text": rev.get("review_text", ""),
+        }
+        text = (rev.get("review_text") or "").strip()
+        if text:
+            try:
+                vec = embed(text[:1000])
+                doc["review_text_vector"] = vec
+            except Exception:
+                log.warning("Failed to embed review %s", rev.get("review_id"))
+        action = {
+            "_index": "reviews",
+            "_id": str(rev.get("review_id")),
+            "_source": doc,
+        }
+        actions.append(action)
+
+    if actions:
+        success, errors = helpers.bulk(es_client, actions, raise_on_error=False)
+        indexed = success
+        if errors:
+            log.warning("Indexing errors: %s", errors[:5])
+    else:
+        indexed = 0
+
+    return {"status": "ok", "indexed": indexed}
+
+
+@app.get("/suggest")
+def suggest(prefix: str = "", size: int = 10) -> List[Dict[str, Any]]:
+    if not prefix.strip():
+        return []
+    body = {
+        "suggest": {
+            "book-suggest": {
+                "prefix": prefix,
+                "completion": {
+                    "field": "suggest",
+                    "size": size,
+                    "skip_duplicates": True,
+                }
+            }
+        }
+    }
+    resp = es_post("books/_search", body)
+    options = (
+        resp
+        .get("suggest", {})
+        .get("book-suggest", [{}])[0]
+        .get("options", [])
+    )
+    results: List[Dict[str, Any]] = []
+    seen: set = set()
+    for opt in options:
+        text = opt.get("text", "")
+        if text and text not in seen:
+            seen.add(text)
+            results.append({
+                "text": text,
+                "score": opt.get("_score", 0),
+            })
+    return results
 
 
 if __name__ == "__main__":

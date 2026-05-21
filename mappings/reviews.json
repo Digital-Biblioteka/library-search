@@ -1,0 +1,38 @@
+{
+  "settings": {
+    "analysis": {
+      "analyzer": {
+        "russian_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": ["lowercase","russian_morphology","english_morphology"]
+        }
+      },
+      "filter": {
+        "russian_morphology": { "type": "stemmer", "language": "russian" },
+        "english_morphology": { "type": "stemmer", "language": "english" }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "review_id": { "type": "long" },
+      "book_id": { "type": "keyword" },
+      "user_id": { "type": "long" },
+      "rating": { "type": "float" },
+      "review_text": {
+        "type": "text",
+        "analyzer": "russian_analyzer",
+        "fields": {
+          "raw": { "type": "keyword", "ignore_above": 512 }
+        }
+      },
+      "review_text_vector": {
+        "type": "dense_vector",
+        "dims": 384,
+        "index": true,
+        "similarity": "cosine"
+      }
+    }
+  }
+}

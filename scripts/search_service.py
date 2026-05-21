@@ -106,6 +106,7 @@ def _init_indices() -> None:
     indices = [
         ("books", MAP_DIR / "books.json"),
         ("book_content", MAP_DIR / "book_content.json"),
+        ("reviews", MAP_DIR / "reviews.json"),
     ]
 
     deadline = time.time() + 120
@@ -135,6 +136,16 @@ def _on_startup() -> None:
 
 
 def es_post(path: str, body: Dict[str, Any]) -> Dict[str, Any]:
+    if not path.startswith("http"):
+        url = f"{ES_URL.rstrip('/')}/{path.lstrip('/')}"
+    else:
+        url = path
+    headers = {"Content-Type": "application/json"}
+    resp = requests.post(url, json=body, headers=headers, timeout=30)
+    if resp.status_code >= 400:
+        log.warning("Elasticsearch POST %s failed: %s %s", path, resp.status_code, resp.text)
+        raise HTTPException(status_code=502, detail=f"ES POST {path} failed: {resp.text}")
+    return resp.json()
     url = f"{ES_URL.rstrip('/')}/{path.lstrip('/')}"
     resp = requests.post(url, json=body, timeout=30)
     if resp.status_code >= 400:
@@ -623,6 +634,181 @@ def search_content(req: ContentSearchRequest) -> List[ContentSearchResult]:
             text_snippet=r.get("text_snippet", ""),
             score=r.get("score", 0.0),
         ))
+    return results
+
+
+@app.post("/search/reviews")
+def search_reviews(req: ContentSearchRequest) -> List[Dict[str, Any]]:
+    if not req.query.strip():
+        return []
+    query = req.query.strip()
+
+    bm25_body: Dict[str, Any] = {
+        "size": req.size or 20,
+        "query": {"match": {"review_text": query}},
+    }
+    bm25_resp = es_post("reviews/_search", bm25_body)
+    bm25_hits = bm25_resp.get("hits", {}).get("hits", [])
+
+    bm25_results: List[Dict[str, Any]] = []
+    for h in bm25_hits:
+        src = h.get("_source", {})
+        bm25_results.append({
+            "book_id": src.get("book_id", ""),
+            "review_text": src.get("review_text", ""),
+            "score": float(h.get("_score", 0)),
+        })
+
+    knn_results: List[Dict[str, Any]] = []
+    try:
+        vec = embed(query)
+        knn_body: Dict[str, Any] = {
+            "size": req.size or 20,
+            "knn": {
+                "field": "review_text_vector",
+                "query_vector": vec,
+                "k": (req.size or 20),
+                "num_candidates": max(100, (req.size or 20) * 10),
+            }
+        }
+        knn_resp = es_post("reviews/_search", knn_body)
+        knn_hits = knn_resp.get("hits", {}).get("hits", [])
+        for h in knn_hits:
+            src = h.get("_source", {})
+            knn_results.append({
+                "book_id": src.get("book_id", ""),
+                "review_text": src.get("review_text", ""),
+                "score": float(h.get("_score", 0)),
+            })
+    except HTTPException:
+        log.warning("Embed/knn failed for review search; fallback to BM25 only")
+    except Exception as e:
+        log.warning("KNN failed for review search: %s", e)
+
+    if not knn_results:
+        return bm25_results
+
+    r_bm25: Dict[str, int] = {}
+    r_knn: Dict[str, int] = {}
+    all_book_ids: set = set()
+    for i, r in enumerate(bm25_results):
+        bid = r["book_id"]
+        r_bm25.setdefault(bid, i + 1)
+        all_book_ids.add(bid)
+    for i, r in enumerate(knn_results):
+        bid = r["book_id"]
+        r_knn.setdefault(bid, i + 1)
+        all_book_ids.add(bid)
+
+    scores: Dict[str, float] = {}
+    texts: Dict[str, List[str]] = {}
+    for bid in all_book_ids:
+        rb = r_bm25.get(bid, 10**9)
+        rk = r_knn.get(bid, 10**9)
+        scores[bid] = 1.0 / (60 + rb) + 1.0 / (60 + rk)
+        for r in bm25_results + knn_results:
+            if r["book_id"] == bid:
+                texts.setdefault(bid, []).append(r["review_text"])
+
+    ordered = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
+    results: List[Dict[str, Any]] = []
+    for bid, _ in ordered[: (req.size or 20)]:
+        results.append({
+            "book_id": bid,
+            "review_text": "\n---\n".join(texts.get(bid, [])),
+            "score": scores[bid],
+        })
+
+    if not results:
+        results = bm25_results[: (req.size or 20)]
+
+    return results
+
+
+@app.post("/index/reviews")
+def index_reviews(req: Dict[str, Any]) -> Dict[str, Any]:
+    reviews = req.get("reviews", [])
+    if not reviews:
+        return {"status": "ok", "indexed": 0}
+
+    if not _es_index_exists("reviews"):
+        mapping = json.loads((MAP_DIR / "reviews.json").read_text(encoding="utf-8"))
+        _es_put("reviews", mapping)
+        log.info("Created Elasticsearch index: reviews")
+
+    from elasticsearch import Elasticsearch, helpers
+    es_client = Elasticsearch(
+        ES_URL,
+        headers={"Accept": "application/vnd.elasticsearch+json; compatible-with=8"}
+    )
+
+    actions: list[Dict] = []
+    for rev in reviews:
+        doc = {
+            "review_id": rev.get("review_id"),
+            "book_id": str(rev.get("book_id", "")),
+            "user_id": rev.get("user_id"),
+            "rating": rev.get("rating", 0.0),
+            "review_text": rev.get("review_text", ""),
+        }
+        text = (rev.get("review_text") or "").strip()
+        if text:
+            try:
+                vec = embed(text[:1000])
+                doc["review_text_vector"] = vec
+            except Exception:
+                log.warning("Failed to embed review %s", rev.get("review_id"))
+        action = {
+            "_index": "reviews",
+            "_id": str(rev.get("review_id")),
+            "_source": doc,
+        }
+        actions.append(action)
+
+    if actions:
+        success, errors = helpers.bulk(es_client, actions, raise_on_error=False)
+        indexed = success
+        if errors:
+            log.warning("Indexing errors: %s", errors[:5])
+    else:
+        indexed = 0
+
+    return {"status": "ok", "indexed": indexed}
+
+
+@app.get("/suggest")
+def suggest(prefix: str = "", size: int = 10) -> List[Dict[str, Any]]:
+    if not prefix.strip():
+        return []
+    body = {
+        "suggest": {
+            "book-suggest": {
+                "prefix": prefix,
+                "completion": {
+                    "field": "suggest",
+                    "size": size,
+                    "skip_duplicates": True,
+                }
+            }
+        }
+    }
+    resp = es_post("books/_search", body)
+    options = (
+        resp
+        .get("suggest", {})
+        .get("book-suggest", [{}])[0]
+        .get("options", [])
+    )
+    results: List[Dict[str, Any]] = []
+    seen: set = set()
+    for opt in options:
+        text = opt.get("text", "")
+        if text and text not in seen:
+            seen.add(text)
+            results.append({
+                "text": text,
+                "score": opt.get("_score", 0),
+            })
     return results
 
 

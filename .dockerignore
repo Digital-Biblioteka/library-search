@@ -1,0 +1,31 @@
+# Git и IDE
+.git
+.gitignore
+.idea
+
+# Данные / загружаемые файлы (не нужны в образе)
+epubs/
+
+# Python артефакты
+__pycache__
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info
+dist/
+build/
+.eggs/
+
+# Документация
+*.md
+examples.md
+tst.md
+
+# Docker-файлы (не нужны внутри образа)
+docker-compose.yml
+Dockerfile*
+
+# Кеши инструментов
+.cache
+*.log

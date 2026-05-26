@@ -1,22 +1,49 @@
-FROM python:3.11-slim
+# ─────────────────────────────────────────────
+# Stage 1: builder — ставим тяжёлые зависимости (torch, sentence-transformers)
+# ─────────────────────────────────────────────
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Копируем только requirements — слой кешируется до изменения файла
+COPY scripts/requirements.txt ./requirements.txt
+
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir --prefer-binary --user -r requirements.txt
+
+# ─────────────────────────────────────────────
+# Stage 2: runtime
+# ─────────────────────────────────────────────
+FROM python:3.11-slim AS runtime
+
+WORKDIR /app
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Переносим пакеты из builder (без gcc/g++)
+COPY --from=builder /root/.local /root/.local
 
-COPY scripts/requirements.txt /app/scripts/requirements.txt
+# Только embed_service и его зависимости (ingest не нужен embed-сервису)
+COPY scripts/embed_service.py ./scripts/embed_service.py
 
-ENV PIP_NO_CACHE_DIR=1
-RUN pip install --upgrade pip \
-    && pip install --prefer-binary -r /app/scripts/requirements.txt
-
-COPY scripts/ /app/scripts/
-
-ENV EMBED_MODEL="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-ENV TRANSFORMERS_CACHE=/root/.cache/huggingface
-ENV HF_HOME=/root/.cache/huggingface
+ENV PATH=/root/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    EMBED_MODEL="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2" \
+    TRANSFORMERS_CACHE=/root/.cache/huggingface \
+    HF_HOME=/root/.cache/huggingface \
+    # torch: отключаем телеметрию и предотвращаем запись __pycache__ в /root
+    TOKENIZERS_PARALLELISM=false
 
 EXPOSE 8000
+
+HEALTHCHECK --interval=10s --timeout=5s --retries=10 --start-period=20m \
+    CMD curl -fsS http://localhost:8000/healthz || exit 1
+
 CMD ["uvicorn", "scripts.embed_service:app", "--host", "0.0.0.0", "--port", "8000"]

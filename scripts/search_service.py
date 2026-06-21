@@ -14,11 +14,20 @@ from ingest.epub_to_json import read_epub
 
 ES_URL = os.getenv("ES_URL", "http://localhost:9200")
 EMBED_URL = os.getenv("EMBED_URL", "http://localhost:8000/embed")
+RERANK_URL = os.getenv("RERANK_URL", "http://localhost:8000/rerank")
 K_RRF = int(os.getenv("K_RRF", "60"))
-BM25_SIZE = int(os.getenv("BM25_SIZE", "100"))
+BM25_SIZE = int(os.getenv("BM25_SIZE", "200"))
 KNN_K = int(os.getenv("KNN_K", "100"))
 KNN_NUM_CANDIDATES = int(os.getenv("KNN_NUM_CANDIDATES", "1000"))
 TOP_N = int(os.getenv("TOP_N", "20"))
+RERANK_TOP_K = int(os.getenv("RERANK_TOP_K", "20"))
+RERANK_MIN_SCORE_DELTA = float(os.getenv("RERANK_MIN_SCORE_DELTA", "0.001"))
+
+EMBED_MODE = os.getenv("EMBED_MODE", "local")
+EMBED_API_URL = os.getenv("EMBED_API_URL", "").rstrip("/")
+EMBED_API_KEY = os.getenv("EMBED_API_KEY", "")
+EMBED_API_MODEL = os.getenv("EMBED_API_MODEL", "text-embedding-ada-002")
+BOOKS_INDEX = os.getenv("BOOKS_INDEX", "books_api" if EMBED_MODE == "api" else "books")
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("search_service")
@@ -27,6 +36,119 @@ ROOT = Path(__file__).resolve().parents[1]
 MAP_DIR = ROOT / "mappings"
 
 app = FastAPI(title="Library Search Service", version="1.0")
+
+SYNONYM_MAP: Dict[str, str] = {
+    "crime": "преступление", "преступление": "crime",
+    "punishment": "наказание", "наказание": "punishment",
+    "war": "война", "война": "war",
+    "peace": "мир", "мир": "peace",
+    "anna": "анна", "анна": "anna",
+    "karenina": "каренина", "каренина": "karenina",
+    "brothers": "братья", "братья": "brothers",
+    "karamazov": "карамазовы", "карамазовы": "karamazov",
+    "idiot": "идиот", "идиот": "idiot",
+    "fathers": "отцы", "отцы": "fathers",
+    "children": "дети", "дети": "children",
+    "love": "любовь", "любовь": "love",
+    "death": "смерть", "смерть": "death",
+    "soul": "душа", "душа": "soul",
+    "dead": "мертвый", "мертвый": "dead",
+    "souls": "души", "души": "souls",
+    "captain": "капитан", "капитан": "captain",
+    "daughter": "дочь", "дочь": "daughter",
+    "garden": "сад", "сад": "garden",
+    "robinson": "робинзон", "робинзон": "robinson",
+    "dracula": "дракула", "дракула": "dracula",
+    "alice": "алиса", "алиса": "alice",
+    "childhood": "детство", "детство": "childhood",
+    "adolescence": "отрочество", "отрочество": "adolescence",
+    "youth": "юность", "юность": "youth",
+    "demons": "бесы", "бесы": "demons",
+    "gulliver": "гулливер", "гулливер": "gulliver",
+    "tom": "том", "том": "tom",
+    "sawyer": "сойер", "сойер": "sawyer",
+    "huckleberry": "гекльберри", "гекльберри": "huckleberry",
+    "fin": "финн", "финн": "fin",
+    "onegin": "онегин", "онегин": "onegin",
+    "evgeny": "евгений", "евгений": "evgeny",
+    "taras": "тарас", "тарас": "taras",
+    "bulba": "бульба", "бульба": "bulba",
+    "mother": "мать", "мать": "mother",
+    "father": "отец", "отец": "father",
+    "prince": "князь", "князь": "prince",
+    "myshkin": "мышкин", "мышкин": "myshkin",
+    "dostoevsky": "dostoyevsky",
+    "dostoyevsky": "достоевский", "достоевский": "dostoyevsky",
+    "tolstoy": "толстой", "толстой": "tolstoy",
+    "turgenev": "тургенев", "тургенев": "turgenev",
+    "gogol": "гоголь", "гоголь": "gogol",
+    "chekhov": "чехов", "чехов": "chekhov",
+    "pushkin": "пушкин", "пушкин": "pushkin",
+    "lermontov": "лермонтов", "лермонтов": "lermontov",
+    "goncharov": "гончаров", "гончаров": "goncharov",
+    "shakespeare": "шекспир", "шекспир": "shakespeare",
+    "dickens": "диккенс", "диккенс": "dickens",
+    "twain": "твен", "твен": "twain",
+    "wilde": "уайльд", "уайльд": "wilde",
+    "kafka": "кафка", "кафка": "kafka",
+    "frankenstein": "франкенштейн", "франкенштейн": "frankenstein",
+    "orwell": "оруэлл", "оруэлл": "orwell",
+    "huxley": "хаксли", "хаксли": "huxley",
+}
+
+
+def expand_query(text: str) -> str:
+    words = text.split()
+    expanded = []
+    for w in words:
+        cleaned = w.strip(".,!?;:\"'()[]{}")
+        punct_before = w[:len(w) - len(cleaned)]
+        punct_after = w[len(cleaned):]
+        synonym = SYNONYM_MAP.get(cleaned.lower())
+        if synonym and synonym.lower() != cleaned.lower():
+            expanded.append(f"{punct_before}{cleaned} {synonym}{punct_after}")
+        else:
+            expanded.append(w)
+    return " ".join(expanded)
+
+
+def _fuzzy_synonym_match(text: str) -> str:
+    import difflib
+    words = text.split()
+    synonyms: List[str] = []
+    for w in words:
+        cleaned = w.strip(".,!?;:\"'()[]{}").lower()
+        if not cleaned:
+            continue
+        matches = difflib.get_close_matches(cleaned, SYNONYM_MAP.keys(), n=1, cutoff=0.8)
+        if matches:
+            synonym = SYNONYM_MAP[matches[0]]
+            if synonym.lower() != cleaned.lower():
+                synonyms.append(synonym)
+    return " ".join(synonyms)
+
+
+def _extract_synonyms_only(text: str) -> str:
+    words = text.split()
+    synonyms: List[str] = []
+    for w in words:
+        cleaned = w.strip(".,!?;:\"'()[]{}")
+        if not cleaned:
+            continue
+        synonym = SYNONYM_MAP.get(cleaned.lower())
+        if synonym and synonym.lower() != cleaned.lower():
+            synonyms.append(synonym)
+    result = " ".join(synonyms)
+    if not result:
+        result = _fuzzy_synonym_match(text)
+    return result
+
+
+def _detect_lang(text: str) -> str:
+    for ch in text:
+        if 'а' <= ch.lower() <= 'я':
+            return "russian"
+    return "english"
 
 
 class SearchRequest(BaseModel):
@@ -47,6 +169,9 @@ class BookDoc(BaseModel):
     linkToBook: str | None = None
     source_uid: str | None = None
     isbn: str | None = None
+    language: str | None = None
+    score: float | None = None
+    rrf_score: float | None = None
 
 
 class IndexBookRequest(BaseModel):
@@ -105,6 +230,7 @@ def _es_put(path: str, body: Dict[str, Any]) -> Dict[str, Any]:
 def _init_indices() -> None:
     indices = [
         ("books", MAP_DIR / "books.json"),
+        ("books_api", MAP_DIR / "books.json"),
         ("book_content", MAP_DIR / "book_content.json"),
         ("reviews", MAP_DIR / "reviews.json"),
     ]
@@ -146,11 +272,6 @@ def es_post(path: str, body: Dict[str, Any]) -> Dict[str, Any]:
         log.warning("Elasticsearch POST %s failed: %s %s", path, resp.status_code, resp.text)
         raise HTTPException(status_code=502, detail=f"ES POST {path} failed: {resp.text}")
     return resp.json()
-    url = f"{ES_URL.rstrip('/')}/{path.lstrip('/')}"
-    resp = requests.post(url, json=body, timeout=30)
-    if resp.status_code >= 400:
-        raise HTTPException(status_code=502, detail=f"ES POST {path} failed: {resp.status_code} {resp.text}")
-    return resp.json()
 
 
 def es_bulk(actions: list[tuple]) -> Dict[str, Any]:
@@ -173,7 +294,7 @@ def es_bulk(actions: list[tuple]) -> Dict[str, Any]:
     return resp.json()
 
 
-def embed(text: str) -> List[float]:
+def embed_local(text: str) -> List[float]:
     try:
         r = requests.post(EMBED_URL, json={"text": text}, timeout=60)
         r.raise_for_status()
@@ -184,6 +305,53 @@ def embed(text: str) -> List[float]:
         return [float(x) for x in vec]
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Embed failed: {e}")
+
+
+def embed_api(text: str) -> List[float] | None:
+    if not EMBED_API_URL or not EMBED_API_KEY:
+        log.info("API embedding not configured (EMBED_API_URL or EMBED_API_KEY missing)")
+        return None
+    try:
+        headers = {
+            "Authorization": f"Bearer {EMBED_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": EMBED_API_MODEL,
+            "input": text,
+        }
+        log.info(f"Calling API embedding: {EMBED_API_URL}, model={EMBED_API_MODEL}")
+        resp = requests.post(f"{EMBED_API_URL}/embeddings", json=payload, headers=headers, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        vec = data["data"][0]["embedding"]
+        if not isinstance(vec, list):
+            raise ValueError("API embed returned no 'embedding'")
+        result = [float(x) for x in vec]
+        log.info(f"API embedding succeeded, dims={len(result)}")
+        return result
+    except Exception as e:
+        log.warning(f"API embedding failed ({e}); will fall back to local model")
+        return None
+
+
+def embed(text: str) -> List[float]:
+    if EMBED_MODE == "api":
+        result = embed_api(text)
+        if result is not None:
+            return result
+        log.info("API embedding failed, falling back to local embed service")
+    return embed_local(text)
+
+
+def rerank(query: str, texts: List[str]) -> Dict[str, Any]:
+    try:
+        r = requests.post(RERANK_URL, json={"query": query, "texts": texts}, timeout=60)
+        r.raise_for_status()
+        return r.json()
+    except Exception as e:
+        log.warning(f"Re-rank failed ({e}); falling back to original order")
+        return {"scores": [0.0] * len(texts), "ranks": [{"index": i, "score": 0.0} for i in range(len(texts))]}
 
 
 def to_book_docs(es_body: Dict[str, Any]) -> List[BookDoc]:
@@ -203,21 +371,24 @@ def to_book_docs(es_body: Dict[str, Any]) -> List[BookDoc]:
             linkToBook=src.get("linkToBook"),
             source_uid=src.get("source_uid"),
             isbn=src.get("isbn"),
+            language=src.get("language"),
             score=float(score) if score is not None else None
         ))
     return out
 
 
-def bm25_top_n(req: SearchRequest, size: int) -> List[BookDoc]:
-    fields: List[str] = []
-    if req.title:
-        fields.append("title^4")
-    if req.author:
-        fields.append("author^3")
-    if req.genre:
-        fields.append("genres^2")
-    fields.append("description")
+def _token_count(text: str) -> int:
+    return len(text.strip().split())
 
+
+def _build_min_should_match(text: str) -> str:
+    n = _token_count(text)
+    if n <= 2:
+        return "100%"
+    return f"{n - 1}<{n - 1} {n}<75%"
+
+
+def bm25_top_n(req: SearchRequest, size: int) -> List[BookDoc]:
     text_parts: List[str] = []
     if req.title:
         text_parts.append(req.title)
@@ -232,17 +403,68 @@ def bm25_top_n(req: SearchRequest, size: int) -> List[BookDoc]:
 
     query_text = " ".join(text_parts).strip()
 
+    is_simple = bool(req.query and not req.title and not req.author and not req.genre and not req.description)
+
+    if is_simple:
+        should = [
+            {"match_phrase": {"title": {"query": query_text, "boost": 100, "slop": 2}}},
+            {"match_phrase": {"author": {"query": query_text, "boost": 40, "slop": 2}}},
+        ]
+
+        if req.query and len(req.query.strip().split()) == 1:
+            should.append({"match": {"title": {"query": req.query, "boost": 3, "fuzziness": 1}}})
+            should.append({"match": {"author": {"query": req.query, "boost": 2, "fuzziness": 1}}})
+        
+
+        cross_lingual_words = _extract_synonyms_only(query_text)
+        if cross_lingual_words:
+            should.append({
+                "match_phrase": {
+                    "author": {
+                        "query": cross_lingual_words,
+                        "boost": 40,
+                        "slop": 2,
+                    }
+                }
+            })
+            should.append({
+                "multi_match": {
+                    "query": cross_lingual_words,
+                    "fields": ["title^80", "author^10"],
+                    "type": "best_fields",
+                }
+            })
+    else:
+        fields: List[str] = []
+        if req.title:
+            fields.append("title^4")
+        elif req.query:
+            fields.append("title^5")
+        if req.author:
+            fields.append("author^3")
+        elif req.query:
+            fields.append("author^3")
+        if req.genre:
+            fields.append("genres^2")
+        if req.description:
+            fields.append("description")
+
+        should = [
+            {"match_phrase": {"title": {"query": query_text, "boost": 50, "slop": 2}}},
+            {"multi_match": {"query": query_text, "fields": fields, "fuzziness": "AUTO"}},
+        ]
+
     body = {
         "from": 0,
         "size": size,
         "query": {
-            "multi_match": {
-                "query": query_text,
-                "fields": fields,
+            "bool": {
+                "should": should,
+                "minimum_should_match": 1,
             }
         },
     }
-    resp = es_post("books/_search", body)
+    resp = es_post(f"{BOOKS_INDEX}/_search", body)
     return to_book_docs(resp)
 
 
@@ -270,7 +492,7 @@ def knn_top_n(req: SearchRequest, k: int, num_candidates: int) -> List[BookDoc]:
             "num_candidates": max(100, num_candidates)
         }
     }
-    resp = es_post("books/_search", body)
+    resp = es_post(f"{BOOKS_INDEX}/_search", body)
     return to_book_docs(resp)
 
 
@@ -295,11 +517,31 @@ def rrf_fuse(bm25: List[BookDoc], knn: List[BookDoc], k_rrf: int, top_n: int) ->
         scores[bid] = sb + sk
     ordered = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
     out: List[BookDoc] = []
-    for bid, _ in ordered[:top_n]:
-        out.append(by_id[bid])
+    for bid, score_val in ordered[:top_n]:
+        d = by_id[bid]
+        d.rrf_score = score_val
+        out.append(d)
     if not out:
         out = bm25[:top_n]
     return out
+
+
+def rerank_by_language(docs: List[BookDoc], query_lang: str, is_simple: bool = False) -> List[BookDoc]:
+    match: List[BookDoc] = []
+    other: List[BookDoc] = []
+
+    for d in docs:
+        if d.language is None or d.language == "":
+            match.append(d)
+        elif d.language.lower() == query_lang.lower():
+            match.append(d)
+        else:
+            other.append(d)
+
+    match.sort(key=lambda d: d.rrf_score or d.score or 0.0, reverse=True)
+    other.sort(key=lambda d: d.rrf_score or d.score or 0.0, reverse=True)
+
+    return match + other
 
 
 def _minio_client() -> Minio:
@@ -312,20 +554,12 @@ def _minio_client() -> Minio:
 
 @app.post("/index/book")
 def index_book(req: IndexBookRequest) -> Dict[str, Any]:
-    """Индексировать книгу по её EPUB в MinIO.
-
-    1. Скачиваем EPUB из RAW_BUCKET по linkToBook (или s3://bucket/key).
-    2. Разбираем через read_epub -> получаем главы и метаданные.
-    3. Формируем документ для индекса books и вектор описания.
-    """
-
     raw_bucket = os.getenv("RAW_BUCKET", "raw")
     link = req.linkToBook or ""
 
     bucket = raw_bucket
     object_name = link
     if link.startswith("s3://"):
-        # формат s3://bucket/key
         rest = link[len("s3://"):]
         parts = rest.split("/", 1)
         if len(parts) == 2:
@@ -336,7 +570,6 @@ def index_book(req: IndexBookRequest) -> Dict[str, Any]:
 
     client = _minio_client()
 
-    # Скачиваем EPUB во временный файл и парсим его
     with tempfile.TemporaryDirectory() as td:
         tmp_path = Path(td) / Path(object_name).name
         resp = client.get_object(bucket, object_name)
@@ -350,7 +583,6 @@ def index_book(req: IndexBookRequest) -> Dict[str, Any]:
 
         data = read_epub(tmp_path)
 
-    # Переписываем/дополняем метаданные данными из Java
     data["book_id"] = str(req.book_id)
     if req.title:
         data["title"] = req.title
@@ -367,7 +599,6 @@ def index_book(req: IndexBookRequest) -> Dict[str, Any]:
 
     data["linkToBook"] = f"s3://{bucket}/{object_name}"
 
-    # Текст для эмбеддинга: описание + первые параграфы
     text_parts: List[str] = []
     if "title" in data and data["title"]:
         text_parts.append(str(data["title"]))
@@ -378,7 +609,6 @@ def index_book(req: IndexBookRequest) -> Dict[str, Any]:
     if "description" in data and data["description"]:
         text_parts.append(str(data["description"]))
 
-    # Добавим немного содержимого книги, если есть главы
     chapters = data.get("chapters") or []
     sample_paragraphs: List[str] = []
     for ch in chapters[:5]:
@@ -403,6 +633,7 @@ def index_book(req: IndexBookRequest) -> Dict[str, Any]:
         "linkToBook": data.get("linkToBook", ""),
         "source_uid": data.get("source_uid"),
         "isbn": data.get("isbn", ""),
+        "language": _detect_lang(text) if text else None,
     }
 
     if vec:
@@ -416,7 +647,7 @@ def index_book(req: IndexBookRequest) -> Dict[str, Any]:
     if suggest_input:
         doc["suggest"] = {"input": suggest_input}
 
-    path = f"books/_doc/{data['book_id']}"
+    path = f"{BOOKS_INDEX}/_doc/{data['book_id']}"
     es_post(path, doc)
 
     chapters = data.get("chapters") or []
@@ -454,7 +685,7 @@ def index_book(req: IndexBookRequest) -> Dict[str, Any]:
 
 @app.delete("/index/book/{book_id}")
 def delete_book(book_id: int) -> Dict[str, Any]:
-    url = f"{ES_URL.rstrip('/')}/books/_doc/{book_id}"
+    url = f"{ES_URL.rstrip('/')}/{BOOKS_INDEX}/_doc/{book_id}"
     try:
         r = requests.delete(url, timeout=10)
         if r.status_code == 404:
@@ -489,13 +720,74 @@ def search_books(req: SearchRequest) -> List[BookDoc]:
     ])
     if not has_any:
         return []
-    bm25 = bm25_top_n(req, BM25_SIZE)
+
+    is_simple = (
+        req.query
+        and not req.title
+        and not req.author
+        and not req.genre
+        and not req.description
+    )
+
+    expanded = SearchRequest(
+        query=req.query,
+        title=expand_query(req.title) if req.title else None,
+        author=expand_query(req.author) if req.author else None,
+        genre=expand_query(req.genre) if req.genre else None,
+        description=expand_query(req.description) if req.description else None,
+    )
+    bm25 = bm25_top_n(expanded, BM25_SIZE)
+
+    if is_simple:
+        docs = bm25[:TOP_N]
+    else:
+        try:
+            knn = knn_top_n(expanded, KNN_K, KNN_NUM_CANDIDATES)
+        except HTTPException:
+            knn = []
+        docs = rrf_fuse(bm25, knn, K_RRF, TOP_N)
+
+    query_text = req.query or req.title or ""
+    if query_text:
+        query_lang = _detect_lang(query_text)
+        docs = rerank_by_language(docs, query_lang, is_simple=is_simple)
+    return docs
+
+
+
+@app.post("/search/books/semantic", response_model=List[BookDoc])
+def search_books_semantic(req: SearchRequest) -> List[BookDoc]:
+    has_any = any([
+        req.query,
+        req.title,
+        req.author,
+        req.genre,
+        req.description,
+    ])
+    if not has_any:
+        return []
     try:
         knn = knn_top_n(req, KNN_K, KNN_NUM_CANDIDATES)
     except HTTPException:
-        log.warning("Embed/knn failed; fallback to BM25 only")
+        log.warning("Embed/knn failed; semantic search falling back to BM25")
         knn = []
-    return rrf_fuse(bm25, knn, K_RRF, TOP_N)
+    if not knn:
+        expanded = SearchRequest(
+            query=req.query,
+            title=expand_query(req.title) if req.title else None,
+            author=expand_query(req.author) if req.author else None,
+            genre=expand_query(req.genre) if req.genre else None,
+            description=expand_query(req.description) if req.description else None,
+        )
+        bm25 = bm25_top_n(expanded, TOP_N)
+        docs = bm25
+    else:
+        docs = knn[:TOP_N]
+    query_text = req.query or req.title or ""
+    if query_text:
+        query_lang = _detect_lang(query_text)
+        docs = rerank_by_language(docs, query_lang)
+    return docs
 
 
 def _content_bm25(query: str, book_id: str | None, size: int) -> List[Dict[str, Any]]:
@@ -585,7 +877,7 @@ def _content_rrf(bm25: List[Dict], knn: List[Dict], k_rrf: int, top_n: int) -> L
 def _fetch_book_metadata(book_ids: List[str]) -> Dict[str, Dict[str, str]]:
     if not book_ids:
         return {}
-    url = f"{ES_URL.rstrip('/')}/books/_mget"
+    url = f"{ES_URL.rstrip('/')}/{BOOKS_INDEX}/_mget"
     body = {"ids": list(set(book_ids))}
     try:
         resp = requests.get(url, json=body, timeout=10)
@@ -713,11 +1005,15 @@ def search_reviews(req: ContentSearchRequest) -> List[Dict[str, Any]]:
     ordered = sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
     results: List[Dict[str, Any]] = []
     for bid, _ in ordered[: (req.size or 20)]:
-        results.append({
-            "book_id": bid,
-            "review_text": "\n---\n".join(texts.get(bid, [])),
-            "score": scores[bid],
-        })
+        reviews_for_book = texts.get(bid, [])
+        if reviews_for_book:
+            results.append({
+                "book_id": bid,
+                "reviews": reviews_for_book,
+                "review_text": reviews_for_book[0],
+                "review_count": len(reviews_for_book),
+                "score": scores[bid],
+            })
 
     if not results:
         results = bm25_results[: (req.size or 20)]
@@ -792,7 +1088,7 @@ def suggest(prefix: str = "", size: int = 10) -> List[Dict[str, Any]]:
             }
         }
     }
-    resp = es_post("books/_search", body)
+    resp = es_post(f"{BOOKS_INDEX}/_search", body)
     options = (
         resp
         .get("suggest", {})

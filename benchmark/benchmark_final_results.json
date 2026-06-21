@@ -1,0 +1,1209 @@
+{
+  "metadata": {
+    "label": "RRF hybrid (Idea 1)",
+    "description": "BM25 + KNN + Python-level RRF fusion on /search/books endpoint",
+    "overall": {
+      "P@5": 0.2816,
+      "R@5": 0.5838,
+      "NDCG@5": 0.5882,
+      "MRR": 0.6803
+    },
+    "by_category": [
+      {
+        "category": "Bm25 Author",
+        "count": 4,
+        "P@5": 0.5,
+        "R@5": 0.4428,
+        "NDCG@5": 0.4963,
+        "MRR": 0.6458
+      },
+      {
+        "category": "Bm25 Title Exact",
+        "count": 9,
+        "P@5": 0.3556,
+        "R@5": 0.9444,
+        "NDCG@5": 0.9481,
+        "MRR": 1.0
+      },
+      {
+        "category": "Content Search",
+        "count": 4,
+        "P@5": 0.0,
+        "R@5": 0.0,
+        "NDCG@5": 0.0,
+        "MRR": 0.0
+      },
+      {
+        "category": "Cross Lingual En Ru",
+        "count": 5,
+        "P@5": 0.32,
+        "R@5": 0.9,
+        "NDCG@5": 0.8229,
+        "MRR": 0.9
+      },
+      {
+        "category": "Cross Lingual Ru En",
+        "count": 10,
+        "P@5": 0.24,
+        "R@5": 0.7,
+        "NDCG@5": 0.692,
+        "MRR": 0.7
+      },
+      {
+        "category": "Filter Rating",
+        "count": 4,
+        "P@5": 0.35,
+        "R@5": 0.875,
+        "NDCG@5": 0.8849,
+        "MRR": 1.0
+      },
+      {
+        "category": "Review Search",
+        "count": 4,
+        "P@5": 0.0,
+        "R@5": 0.0,
+        "NDCG@5": 0.0,
+        "MRR": 0.0
+      },
+      {
+        "category": "Semantic Same Language",
+        "count": 9,
+        "P@5": 0.3556,
+        "R@5": 0.3704,
+        "NDCG@5": 0.4145,
+        "MRR": 0.6944
+      }
+    ]
+  },
+  "per_query": [
+    {
+      "id": "cross-ru-en-01",
+      "type": "semantic",
+      "query": "преступление и наказание",
+      "description": "Cross-lingual: Russian query finds Russian (20) and English (68) versions of Crime and Punishment",
+      "category": "cross-lingual-ru-en",
+      "top5_ids": [
+        20,
+        68,
+        17,
+        21,
+        37
+      ],
+      "top5_titles": [
+        "Преступление и наказание",
+        "Crime and Punishment",
+        "Братья Карамазовы",
+        "Записки из подполья",
+        "Пиковая дама"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "cross-ru-en-02",
+      "type": "semantic",
+      "query": "война и мир",
+      "description": "Cross-lingual: Russian query 'war and peace' finds English War and Peace (69)",
+      "category": "cross-lingual-ru-en",
+      "top5_ids": [
+        69,
+        16,
+        101,
+        30,
+        58
+      ],
+      "top5_titles": [
+        "War and Peace",
+        "Бесы",
+        "A Hero of Our Time",
+        "Зов предков",
+        "The Daughter of the Commandant"
+      ],
+      "P@5": 0.2,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "cross-ru-en-03",
+      "type": "semantic",
+      "query": "анна каренина",
+      "description": "Cross-lingual: Russian query finds Russian (44) and English (59) Anna Karenina",
+      "category": "cross-lingual-ru-en",
+      "top5_ids": [
+        92,
+        90,
+        38,
+        32,
+        11
+      ],
+      "top5_titles": [
+        "The Precipice",
+        "On the eve: A novel",
+        "Повести Белкина",
+        "Маленькие женщины",
+        "Вишневый сад"
+      ],
+      "P@5": 0.0,
+      "R@5": 0.0,
+      "NDCG@5": 0.0,
+      "MRR": 0.0
+    },
+    {
+      "id": "cross-ru-en-04",
+      "type": "semantic",
+      "query": "братья карамазовы",
+      "description": "Cross-lingual: Russian query finds Russian (17) and English (71) Brothers Karamazov",
+      "category": "cross-lingual-ru-en",
+      "top5_ids": [
+        71,
+        39,
+        17,
+        11,
+        38
+      ],
+      "top5_titles": [
+        "The Brothers Karamazov",
+        "Дон Кихот (без иллюстраций)",
+        "Братья Карамазовы",
+        "Вишневый сад",
+        "Повести Белкина"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 0.9197,
+      "MRR": 1.0
+    },
+    {
+      "id": "cross-ru-en-05",
+      "type": "semantic",
+      "query": "идиот",
+      "description": "Cross-lingual: Russian query finds Russian (18) and English (70) The Idiot",
+      "category": "cross-lingual-ru-en",
+      "top5_ids": [
+        70,
+        18,
+        90,
+        98,
+        37
+      ],
+      "top5_titles": [
+        "The Idiot",
+        "Идиот",
+        "On the eve: A novel",
+        "The Importance of Being Earnest: A Trivial Comedy for Serious People",
+        "Пиковая дама"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "cross-ru-en-06",
+      "type": "semantic",
+      "query": "мертвые души",
+      "description": "Cross-lingual: Russian query finds Russian (22) and English (49) Dead Souls",
+      "category": "cross-lingual-ru-en",
+      "top5_ids": [
+        49,
+        22,
+        45,
+        32,
+        7
+      ],
+      "top5_titles": [
+        "Dead Souls",
+        "Мертвые души",
+        "Воскресение. Повести. Рассказы",
+        "Маленькие женщины",
+        "Таинственный сад"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "cross-ru-en-07",
+      "type": "semantic",
+      "query": "отцы и дети",
+      "description": "Cross-lingual: Russian query finds English Fathers and Children (73)",
+      "category": "cross-lingual-ru-en",
+      "top5_ids": [
+        73,
+        71,
+        60,
+        64,
+        32
+      ],
+      "top5_titles": [
+        "Fathers and Children",
+        "The Brothers Karamazov",
+        "Great Expectations",
+        "Childhood",
+        "Маленькие женщины"
+      ],
+      "P@5": 0.2,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "cross-ru-en-08",
+      "type": "semantic",
+      "query": "тарас бульба",
+      "description": "Cross-lingual: Russian query finds Taras Bulba (51) in English",
+      "category": "cross-lingual-ru-en",
+      "top5_ids": [
+        2,
+        24,
+        6,
+        45,
+        28
+      ],
+      "top5_titles": [
+        "Five Weeks in a Balloon",
+        "Ревизор",
+        "Удивительный Волшебник из Страны Оз",
+        "Воскресение. Повести. Рассказы",
+        "Алиса в Стране чудес"
+      ],
+      "P@5": 0.0,
+      "R@5": 0.0,
+      "NDCG@5": 0.0,
+      "MRR": 0.0
+    },
+    {
+      "id": "cross-en-ru-01",
+      "type": "semantic",
+      "query": "crime and punishment",
+      "description": "Cross-lingual: English query finds English (68) and Russian (20) Crime and Punishment",
+      "category": "cross-lingual-en-ru",
+      "top5_ids": [
+        20,
+        68,
+        17,
+        21,
+        77
+      ],
+      "top5_titles": [
+        "Преступление и наказание",
+        "Crime and Punishment",
+        "Братья Карамазовы",
+        "Записки из подполья",
+        "The Inspector-General"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "cross-en-ru-02",
+      "type": "semantic",
+      "query": "war and peace",
+      "description": "Cross-lingual: English query finds English War and Peace (69)",
+      "category": "cross-lingual-en-ru",
+      "top5_ids": [
+        69,
+        16,
+        30,
+        86,
+        58
+      ],
+      "top5_titles": [
+        "War and Peace",
+        "Бесы",
+        "Зов предков",
+        "A House of Gentlefolk",
+        "The Daughter of the Commandant"
+      ],
+      "P@5": 0.2,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "cross-en-ru-03",
+      "type": "semantic",
+      "query": "anna karenina",
+      "description": "Cross-lingual: English query finds English (59) and Russian (44) Anna Karenina",
+      "category": "cross-lingual-en-ru",
+      "top5_ids": [
+        58,
+        44,
+        90,
+        59,
+        11
+      ],
+      "top5_titles": [
+        "The Daughter of the Commandant",
+        "Анна Каренина",
+        "On the eve: A novel",
+        "Anna Karenina",
+        "Вишневый сад"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 0.6509,
+      "MRR": 0.5
+    },
+    {
+      "id": "cross-en-ru-04",
+      "type": "semantic",
+      "query": "the brothers karamazov",
+      "description": "Cross-lingual: English query finds English (71) and Russian (17) Brothers Karamazov",
+      "category": "cross-lingual-en-ru",
+      "top5_ids": [
+        71,
+        38,
+        11,
+        31,
+        92
+      ],
+      "top5_titles": [
+        "The Brothers Karamazov",
+        "Повести Белкина",
+        "Вишневый сад",
+        "Государь",
+        "The Precipice"
+      ],
+      "P@5": 0.2,
+      "R@5": 0.5,
+      "NDCG@5": 0.6131,
+      "MRR": 1.0
+    },
+    {
+      "id": "cross-en-ru-05",
+      "type": "semantic",
+      "query": "the idiot",
+      "description": "Cross-lingual: English query finds English (70) and Russian (18) The Idiot",
+      "category": "cross-lingual-en-ru",
+      "top5_ids": [
+        70,
+        98,
+        37,
+        90,
+        18
+      ],
+      "top5_titles": [
+        "The Idiot",
+        "The Importance of Being Earnest: A Trivial Comedy for Serious People",
+        "Пиковая дама",
+        "On the eve: A novel",
+        "Идиот"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 0.8503,
+      "MRR": 1.0
+    },
+    {
+      "id": "semantic-same-01",
+      "type": "semantic",
+      "query": "про любовь",
+      "description": "Semantic: 'about love' should find romance-themed books in Russian and English",
+      "category": "semantic-same-language",
+      "top5_ids": [
+        56,
+        85,
+        32,
+        9,
+        80
+      ],
+      "top5_titles": [
+        "Pride and Prejudice",
+        "First love, and other stories",
+        "Маленькие женщины",
+        "Грозовой перевал",
+        "Little Women"
+      ],
+      "P@5": 0.2,
+      "R@5": 0.3333,
+      "NDCG@5": 0.2961,
+      "MRR": 0.5
+    },
+    {
+      "id": "semantic-same-02",
+      "type": "semantic",
+      "query": "revenge ambition power",
+      "description": "Semantic: themes of power and ambition should find The Possessed / Demons and Notes from Underground",
+      "category": "semantic-same-language",
+      "top5_ids": [
+        21,
+        17,
+        37,
+        33,
+        95
+      ],
+      "top5_titles": [
+        "Записки из подполья",
+        "Братья Карамазовы",
+        "Пиковая дама",
+        "Гордость и Предубеждение",
+        "Wuthering Heights"
+      ],
+      "P@5": 0.2,
+      "R@5": 0.25,
+      "NDCG@5": 0.2385,
+      "MRR": 1.0
+    },
+    {
+      "id": "semantic-same-03",
+      "type": "semantic",
+      "query": "превращение человека в насекомое",
+      "description": "Semantic: 'transformation into insect' should find Kafka's Metamorphosis in RU (27) and EN (81)",
+      "category": "semantic-same-language",
+      "top5_ids": [
+        2,
+        6,
+        21,
+        27,
+        28
+      ],
+      "top5_titles": [
+        "Five Weeks in a Balloon",
+        "Удивительный Волшебник из Страны Оз",
+        "Записки из подполья",
+        "Превращение",
+        "Алиса в Стране чудес"
+      ],
+      "P@5": 0.2,
+      "R@5": 0.5,
+      "NDCG@5": 0.2641,
+      "MRR": 0.25
+    },
+    {
+      "id": "semantic-same-04",
+      "type": "semantic",
+      "query": "путешествия и приключения",
+      "description": "Semantic: 'travel and adventures' should find adventure books across languages",
+      "category": "semantic-same-language",
+      "top5_ids": [
+        3,
+        89,
+        41,
+        1,
+        43
+      ],
+      "top5_titles": [
+        "Journey to the Center of the Earth",
+        "Gulliver's Travels",
+        "Остров сокровищ",
+        "An Antarctic Mystery",
+        "Путешествия Гулливера"
+      ],
+      "P@5": 0.6,
+      "R@5": 0.3333,
+      "NDCG@5": 0.5148,
+      "MRR": 0.5
+    },
+    {
+      "id": "semantic-same-05",
+      "type": "semantic",
+      "query": "children growing up",
+      "description": "Semantic: 'children growing up' should find coming-of-age stories",
+      "category": "semantic-same-language",
+      "top5_ids": [
+        64,
+        73,
+        50,
+        32,
+        60
+      ],
+      "top5_titles": [
+        "Childhood",
+        "Fathers and Children",
+        "The Secret Garden",
+        "Маленькие женщины",
+        "Great Expectations"
+      ],
+      "P@5": 0.4,
+      "R@5": 0.3333,
+      "NDCG@5": 0.4852,
+      "MRR": 1.0
+    },
+    {
+      "id": "semantic-same-06",
+      "type": "semantic",
+      "query": "готический роман ужасы",
+      "description": "Semantic: 'gothic horror novel' should find Frankenstein, Dracula, Wuthering Heights",
+      "category": "semantic-same-language",
+      "top5_ids": [
+        42,
+        9,
+        40,
+        75,
+        27
+      ],
+      "top5_titles": [
+        "Дракула",
+        "Грозовой перевал",
+        "Франкенштейн",
+        "Dracula",
+        "Превращение"
+      ],
+      "P@5": 0.8,
+      "R@5": 0.6667,
+      "NDCG@5": 0.8153,
+      "MRR": 1.0
+    },
+    {
+      "id": "semantic-same-07",
+      "type": "semantic",
+      "query": "love marriage society",
+      "description": "Semantic: 'love marriage society' should find romance/society novels like Pride and Prejudice and Anna Karenina",
+      "category": "semantic-same-language",
+      "top5_ids": [
+        56,
+        32,
+        59,
+        33,
+        54
+      ],
+      "top5_titles": [
+        "Pride and Prejudice",
+        "Маленькие женщины",
+        "Anna Karenina",
+        "Гордость и Предубеждение",
+        "Jane Eyre: An Autobiography"
+      ],
+      "P@5": 0.6,
+      "R@5": 0.75,
+      "NDCG@5": 0.7537,
+      "MRR": 1.0
+    },
+    {
+      "id": "semantic-same-08",
+      "type": "semantic",
+      "query": "смерть и страдание",
+      "description": "Semantic: 'death and suffering' should find Death of Ivan Ilyich and Crime and Punishment",
+      "category": "semantic-same-language",
+      "top5_ids": [
+        49,
+        17,
+        38,
+        45,
+        22
+      ],
+      "top5_titles": [
+        "Dead Souls",
+        "Братья Карамазовы",
+        "Повести Белкина",
+        "Воскресение. Повести. Рассказы",
+        "Мертвые души"
+      ],
+      "P@5": 0.0,
+      "R@5": 0.0,
+      "NDCG@5": 0.0,
+      "MRR": 0.0
+    },
+    {
+      "id": "bm25-title-01",
+      "type": "bm25",
+      "query": "война",
+      "description": "BM25 exact: 'война' should match War and Peace title",
+      "category": "bm25-title-exact",
+      "top5_ids": [
+        69,
+        16,
+        37,
+        101,
+        58
+      ],
+      "top5_titles": [
+        "War and Peace",
+        "Бесы",
+        "Пиковая дама",
+        "A Hero of Our Time",
+        "The Daughter of the Commandant"
+      ],
+      "P@5": 0.2,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "bm25-title-02",
+      "type": "bm25",
+      "query": "преступление",
+      "description": "BM25 exact: 'преступление' should match Russian and English Crime and Punishment",
+      "category": "bm25-title-exact",
+      "top5_ids": [
+        20,
+        68,
+        13,
+        21,
+        17
+      ],
+      "top5_titles": [
+        "Преступление и наказание",
+        "Crime and Punishment",
+        "Большие надежды",
+        "Записки из подполья",
+        "Братья Карамазовы"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "bm25-title-03",
+      "type": "bm25",
+      "query": "love",
+      "description": "BM25 exact: 'love' should match Pride and Prejudice (56) and First love (85)",
+      "category": "bm25-title-exact",
+      "top5_ids": [
+        85,
+        56,
+        95,
+        80,
+        9
+      ],
+      "top5_titles": [
+        "First love, and other stories",
+        "Pride and Prejudice",
+        "Wuthering Heights",
+        "Little Women",
+        "Грозовой перевал"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "bm25-title-04",
+      "type": "bm25",
+      "query": "alice",
+      "description": "BM25 exact: 'alice' should find Alice in Wonderland in RU (28) and EN (72)",
+      "category": "bm25-title-exact",
+      "top5_ids": [
+        28,
+        72,
+        59,
+        32,
+        69
+      ],
+      "top5_titles": [
+        "Алиса в Стране чудес",
+        "Alice's Adventures in Wonderland / Illustrated by Arthur Rackham. With a Proem by Austin Dobson",
+        "Anna Karenina",
+        "Маленькие женщины",
+        "War and Peace"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "bm25-title-05",
+      "type": "bm25",
+      "query": "garden",
+      "description": "BM25 exact: 'garden' should find The Secret Garden in RU (7) and EN (50)",
+      "category": "bm25-title-exact",
+      "top5_ids": [
+        50,
+        7,
+        11,
+        86,
+        39
+      ],
+      "top5_titles": [
+        "The Secret Garden",
+        "Таинственный сад",
+        "Вишневый сад",
+        "A House of Gentlefolk",
+        "Дон Кихот (без иллюстраций)"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "bm25-title-06",
+      "type": "bm25",
+      "query": "детство",
+      "description": "BM25 exact: 'детство' should find Childhood/Детство in RU (46) and EN (64)",
+      "category": "bm25-title-exact",
+      "top5_ids": [
+        64,
+        46,
+        35,
+        83,
+        73
+      ],
+      "top5_titles": [
+        "Childhood",
+        "Детство. Отрочество. Юность",
+        "Капитанская дочка",
+        "The Wonderful Wizard of Oz",
+        "Fathers and Children"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "bm25-author-01",
+      "type": "bm25",
+      "query": "Dostoevsky",
+      "description": "BM25 author: 'Dostoevsky' should find all English books by Dostoevsky",
+      "category": "bm25-author",
+      "top5_ids": [
+        18,
+        20,
+        70,
+        96,
+        16
+      ],
+      "top5_titles": [
+        "Идиот",
+        "Преступление и наказание",
+        "The Idiot",
+        "The possessed",
+        "Бесы"
+      ],
+      "P@5": 0.4,
+      "R@5": 0.4,
+      "NDCG@5": 0.3156,
+      "MRR": 0.3333
+    },
+    {
+      "id": "bm25-author-02",
+      "type": "bm25",
+      "query": "Turgenev",
+      "description": "BM25 author: 'Turgenev' should find English books by Turgenev",
+      "category": "bm25-author",
+      "top5_ids": [
+        78,
+        100,
+        99,
+        73,
+        10
+      ],
+      "top5_titles": [
+        "The diary of a superfluous man, and other stories",
+        "A Desperate Character and Other Stories",
+        "The Jew and Other Stories",
+        "Fathers and Children",
+        "Дама с собачкой"
+      ],
+      "P@5": 0.8,
+      "R@5": 0.5714,
+      "NDCG@5": 0.8688,
+      "MRR": 1.0
+    },
+    {
+      "id": "bm25-author-03",
+      "type": "bm25",
+      "query": "Tolstoy",
+      "description": "BM25 author: 'Tolstoy' should find all English books by Tolstoy",
+      "category": "bm25-author",
+      "top5_ids": [
+        47,
+        44,
+        46,
+        64,
+        45
+      ],
+      "top5_titles": [
+        "Полное собрание сочинений. Том 26. Произведения 1885–1889 гг. Смерть Ивана Ильича",
+        "Анна Каренина",
+        "Детство. Отрочество. Юность",
+        "Childhood",
+        "Воскресение. Повести. Рассказы"
+      ],
+      "P@5": 0.2,
+      "R@5": 0.2,
+      "NDCG@5": 0.1461,
+      "MRR": 0.25
+    },
+    {
+      "id": "review-search-01",
+      "type": "review",
+      "query": "великолепная книга",
+      "description": "Review search: 'великолепная книга' appears in review for Таинственный сад (7)",
+      "category": "review-search",
+      "top5_ids": [],
+      "top5_titles": [],
+      "P@5": 0.0,
+      "R@5": 0.0,
+      "NDCG@5": 0.0,
+      "MRR": 0.0
+    },
+    {
+      "id": "review-search-02",
+      "type": "review",
+      "query": "interesting",
+      "description": "Review search: 'interesting' appears in reviews for Идиот (18), Обломов (25), Алиса (28), Зов предков (30)",
+      "category": "review-search",
+      "top5_ids": [],
+      "top5_titles": [],
+      "P@5": 0.0,
+      "R@5": 0.0,
+      "NDCG@5": 0.0,
+      "MRR": 0.0
+    },
+    {
+      "id": "review-search-03",
+      "type": "review",
+      "query": "обязателен к прочтению",
+      "description": "Review search: 'обязателен к прочтению' appears in review for Преступление и наказание (20)",
+      "category": "review-search",
+      "top5_ids": [],
+      "top5_titles": [],
+      "P@5": 0.0,
+      "R@5": 0.0,
+      "NDCG@5": 0.0,
+      "MRR": 0.0
+    },
+    {
+      "id": "content-search-01",
+      "type": "content",
+      "query": "It was the best of times",
+      "description": "Content search: famous opening of A Tale of Two Cities should find it in RU (14) and EN (102)",
+      "category": "content-search",
+      "top5_ids": [],
+      "top5_titles": [],
+      "P@5": 0.0,
+      "R@5": 0.0,
+      "NDCG@5": 0.0,
+      "MRR": 0.0
+    },
+    {
+      "id": "content-search-02",
+      "type": "content",
+      "query": "to be or not to be",
+      "description": "Content search: Shakespeare's 'to be or not to be' should find Shakespeare Poetry (4) if content is indexed",
+      "category": "content-search",
+      "top5_ids": [],
+      "top5_titles": [],
+      "P@5": 0.0,
+      "R@5": 0.0,
+      "NDCG@5": 0.0,
+      "MRR": 0.0
+    },
+    {
+      "id": "content-search-03",
+      "type": "content",
+      "query": "звёзды",
+      "description": "Content search: 'звёзды' may appear in book content of any Russian book — exploratory query",
+      "category": "content-search",
+      "top5_ids": [],
+      "top5_titles": [],
+      "P@5": 0.0,
+      "R@5": 0.0,
+      "NDCG@5": 0.0,
+      "MRR": 0.0
+    },
+    {
+      "id": "filter-rating-01",
+      "type": "filter-rating",
+      "query": "crime",
+      "description": "Filter: 'crime' with minRating=4 should find Cr and Punishment (ratings currently NULL, tests filter param presence)",
+      "category": "filter-rating",
+      "top5_ids": [
+        20,
+        68,
+        13,
+        21,
+        17
+      ],
+      "top5_titles": [
+        "Преступление и наказание",
+        "Crime and Punishment",
+        "Большие надежды",
+        "Записки из подполья",
+        "Братья Карамазовы"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "filter-rating-02",
+      "type": "filter-rating",
+      "query": "love",
+      "description": "Filter: 'love' with minRating=3 (ratings NULL, tests text+filter combination)",
+      "category": "filter-rating",
+      "top5_ids": [
+        85,
+        56,
+        95,
+        80,
+        9
+      ],
+      "top5_titles": [
+        "First love, and other stories",
+        "Pride and Prejudice",
+        "Wuthering Heights",
+        "Little Women",
+        "Грозовой перевал"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "filter-rating-03",
+      "type": "filter-rating",
+      "query": "война",
+      "description": "Filter: 'война' with minRating=4 (ratings NULL, tests RU query + filter)",
+      "category": "filter-rating",
+      "top5_ids": [
+        69,
+        16,
+        37,
+        101,
+        58
+      ],
+      "top5_titles": [
+        "War and Peace",
+        "Бесы",
+        "Пиковая дама",
+        "A Hero of Our Time",
+        "The Daughter of the Commandant"
+      ],
+      "P@5": 0.2,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "filter-rating-04",
+      "type": "filter-rating",
+      "query": "children",
+      "description": "Filter: 'children' with minRating=3 should find various books with 'children' in title",
+      "category": "filter-rating",
+      "top5_ids": [
+        73,
+        46,
+        93,
+        32,
+        83
+      ],
+      "top5_titles": [
+        "Fathers and Children",
+        "Детство. Отрочество. Юность",
+        "The Adventures of Tom Sawyer, Complete",
+        "Маленькие женщины",
+        "The Wonderful Wizard of Oz"
+      ],
+      "P@5": 0.4,
+      "R@5": 0.5,
+      "NDCG@5": 0.5395,
+      "MRR": 1.0
+    },
+    {
+      "id": "bm25-title-07",
+      "type": "bm25",
+      "query": "robinson",
+      "description": "BM25 exact: 'robinson' should find Robinson Crusoe in RU (12) and EN (91)",
+      "category": "bm25-title-exact",
+      "top5_ids": [
+        91,
+        30,
+        12,
+        42,
+        3
+      ],
+      "top5_titles": [
+        "Robinson Crusoe",
+        "Зов предков",
+        "Робинзон Крузо[перевод: Корней Иванович Чуковский]",
+        "Дракула",
+        "Journey to the Center of the Earth"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 0.9197,
+      "MRR": 1.0
+    },
+    {
+      "id": "bm25-title-08",
+      "type": "bm25",
+      "query": "франкенштейн",
+      "description": "BM25 exact: 'франкенштейн' should find Frankenstein in RU (40) and EN (97)",
+      "category": "bm25-title-exact",
+      "top5_ids": [
+        40,
+        31,
+        67,
+        84,
+        99
+      ],
+      "top5_titles": [
+        "Франкенштейн",
+        "Государь",
+        "Eugene Oneguine [Onegin] / A Romance of Russian Life in Verse",
+        "The Queen of Spades, and other stories",
+        "The Jew and Other Stories"
+      ],
+      "P@5": 0.2,
+      "R@5": 0.5,
+      "NDCG@5": 0.6131,
+      "MRR": 1.0
+    },
+    {
+      "id": "cross-ru-en-09",
+      "type": "semantic",
+      "query": "евгений онегин",
+      "description": "Cross-lingual: Russian query finds Евгений Онегин (48) and Eugene Onegin (67)",
+      "category": "cross-lingual-ru-en",
+      "top5_ids": [
+        32,
+        10,
+        90,
+        26,
+        12
+      ],
+      "top5_titles": [
+        "Маленькие женщины",
+        "Дама с собачкой",
+        "On the eve: A novel",
+        "Алая буква",
+        "Робинзон Крузо[перевод: Корней Иванович Чуковский]"
+      ],
+      "P@5": 0.0,
+      "R@5": 0.0,
+      "NDCG@5": 0.0,
+      "MRR": 0.0
+    },
+    {
+      "id": "cross-ru-en-10",
+      "type": "semantic",
+      "query": "капитанская дочка",
+      "description": "Cross-lingual: Russian query finds Капитанская дочка (35) and English version (58)",
+      "category": "cross-lingual-ru-en",
+      "top5_ids": [
+        35,
+        58,
+        32,
+        26,
+        52
+      ],
+      "top5_titles": [
+        "Капитанская дочка",
+        "The Daughter of the Commandant",
+        "Маленькие женщины",
+        "Алая буква",
+        "Treasure Island"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    },
+    {
+      "id": "semantic-same-09",
+      "type": "semantic",
+      "query": "одиночество и общество",
+      "description": "Semantic: 'loneliness and society' should find Oblomov, Notes from Underground, The Idiot",
+      "category": "semantic-same-language",
+      "top5_ids": [
+        21,
+        54,
+        86,
+        32,
+        96
+      ],
+      "top5_titles": [
+        "Записки из подполья",
+        "Jane Eyre: An Autobiography",
+        "A House of Gentlefolk",
+        "Маленькие женщины",
+        "The possessed"
+      ],
+      "P@5": 0.2,
+      "R@5": 0.1667,
+      "NDCG@5": 0.363,
+      "MRR": 1.0
+    },
+    {
+      "id": "bm25-author-04",
+      "type": "bm25",
+      "query": "Достоевский",
+      "description": "BM25 author: 'Достоевский' should find all Russian books by Dostoevsky",
+      "category": "bm25-author",
+      "top5_ids": [
+        18,
+        70,
+        16,
+        17,
+        31
+      ],
+      "top5_titles": [
+        "Идиот",
+        "The Idiot",
+        "Бесы",
+        "Братья Карамазовы",
+        "Государь"
+      ],
+      "P@5": 0.6,
+      "R@5": 0.6,
+      "NDCG@5": 0.6548,
+      "MRR": 1.0
+    },
+    {
+      "id": "review-search-04",
+      "type": "review",
+      "query": "шедевр",
+      "description": "Review search: 'шедевр' appears in reviews for Джейн Эйр (8), Бесы (16), Братья Карамазовы (17), Ревизор (24), Превращение (27)",
+      "category": "review-search",
+      "top5_ids": [],
+      "top5_titles": [],
+      "P@5": 0.0,
+      "R@5": 0.0,
+      "NDCG@5": 0.0,
+      "MRR": 0.0
+    },
+    {
+      "id": "content-search-04",
+      "type": "content",
+      "query": "It is a truth universally acknowledged",
+      "description": "Content search: famous opening of Pride and Prejudice should find it in RU (33) and EN (56)",
+      "category": "content-search",
+      "top5_ids": [],
+      "top5_titles": [],
+      "P@5": 0.0,
+      "R@5": 0.0,
+      "NDCG@5": 0.0,
+      "MRR": 0.0
+    },
+    {
+      "id": "bm25-title-09",
+      "type": "bm25",
+      "query": "dracula",
+      "description": "BM25 exact: 'dracula' should find Dracula in RU (42) and EN (75)",
+      "category": "bm25-title-exact",
+      "top5_ids": [
+        42,
+        75,
+        6,
+        27,
+        83
+      ],
+      "top5_titles": [
+        "Дракула",
+        "Dracula",
+        "Удивительный Волшебник из Страны Оз",
+        "Превращение",
+        "The Wonderful Wizard of Oz"
+      ],
+      "P@5": 0.4,
+      "R@5": 1.0,
+      "NDCG@5": 1.0,
+      "MRR": 1.0
+    }
+  ]
+}

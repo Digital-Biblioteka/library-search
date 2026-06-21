@@ -1,0 +1,91 @@
+{
+  "runs": [
+    {
+      "label": "A-minilm-baseline",
+      "description": "MiniLM (sentence-transformers) baseline, bm25 + knn (384d), no reranker",
+      "config": {
+        "embed_mode": "local",
+        "embed_model": "all-MiniLM-L6-v2",
+        "embed_dims": 384,
+        "rerank": false
+      },
+      "result_file": "results/A-minilm-baseline/results.json",
+      "date": "2026-06-17"
+    },
+    {
+      "label": "B-minilm-rerank",
+      "description": "MiniLM (sentence-transformers) bm25 + knn (384d) + cross-encoder reranker",
+      "config": {
+        "embed_mode": "local",
+        "embed_model": "all-MiniLM-L6-v2",
+        "embed_dims": 384,
+        "rerank": true
+      },
+      "result_file": "results/B-minilm-rerank/results.json",
+      "date": "2026-06-17"
+    },
+    {
+      "label": "C-api-embed-norerank",
+      "description": "API text-embedding-3-small (1536d) via Polza AI, bm25 + knn, no reranker, index: books_text_embedding_3_small",
+      "config": {
+        "embed_mode": "api",
+        "embed_model": "text-embedding-3-small",
+        "embed_dims": 1536,
+        "rerank": false,
+        "rerank_top_k": 0
+      },
+      "result_file": "results/C-api-embed-norerank/results.json",
+      "date": "2026-06-18"
+    },
+    {
+      "label": "D-api-embed-rerank",
+      "description": "API text-embedding-3-small (1536d) via Polza AI, bm25 + knn + cross-encoder reranker, index: books_text_embedding_3_small",
+      "config": {
+        "embed_mode": "api",
+        "embed_model": "text-embedding-3-small",
+        "embed_dims": 1536,
+        "rerank": true,
+        "rerank_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "rerank_top_k": 20
+      },
+      "result_file": "results/D-api-embed-rerank/results.json",
+      "date": "2026-06-18"
+    },
+    {
+      "label": "E-local-multilingual-rerank",
+      "description": "Local multilingual MiniLM (paraphrase-multilingual-MiniLM-L12-v2) bm25 + knn (384d) + cross-encoder reranker, KNN_K=300, TOP_N=30, RERANK_TOP_K=20",
+      "config": {
+        "embed_mode": "local",
+        "embed_model": "paraphrase-multilingual-MiniLM-L12-v2",
+        "embed_dims": 384,
+        "rerank": true,
+        "rerank_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        "knn_k": 300,
+        "top_n": 30,
+        "rerank_top_k": 20
+      },
+      "result_file": "results/E-local-multilingual-rerank/results.json",
+      "date": "2026-06-18"
+    },
+    {
+      "label": "rrf-v3-fixed",
+      "description": "RRF v3: BM25 + KNN + Python-level RRF fusion on /search/books endpoint. Fixed: review search endpoint, content search URL, fuzziness=1 single-word-only, difflib cross-lingual typo fallback, lang grouping",
+      "config": {
+        "embed_mode": "api",
+        "embed_model": "text-embedding-3-small",
+        "embed_dims": 1536,
+        "rerank": false,
+        "knn_k": 100,
+        "top_n": 20,
+        "rrf_k": 60,
+        "lang_grouping": true,
+        "fuzziness": 1,
+        "fuzziness_single_word_only": true,
+        "synonym_expansion": true,
+        "cross_lingual_typo_fallback": "difflib"
+      },
+      "result_file": "benchmark_rrf_results.json",
+      "date": "2026-06-21"
+    }
+  ]
+}

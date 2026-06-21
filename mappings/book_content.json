@@ -6,7 +6,16 @@
           "type": "custom",
           "tokenizer": "standard",
           "filter": ["lowercase","asciifolding"]
+        },
+        "rus_eng_analyzer": {
+          "type": "custom",
+          "tokenizer": "standard",
+          "filter": ["lowercase","asciifolding","russian_morphology","english_morphology"]
         }
+      },
+      "filter": {
+        "russian_morphology": { "type": "stemmer", "language": "russian" },
+        "english_morphology": { "type": "stemmer", "language": "english" }
       }
     }
   },
@@ -14,10 +23,10 @@
     "properties": {
       "book_id": { "type": "keyword" },
       "chunk_id": { "type": "keyword" },
-      "chapter": { "type": "text" },
+      "chapter": { "type": "text", "analyzer": "rus_eng_analyzer" },
       "chapter_index": { "type": "integer" },
       "paragraph_index": { "type": "integer" },
-      "text": { "type": "text" },
+      "text": { "type": "text", "analyzer": "rus_eng_analyzer" },
       "text_vector": { "type": "dense_vector", "dims": 384, "index": true, "similarity": "cosine" }
     }
   }

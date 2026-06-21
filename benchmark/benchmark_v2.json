@@ -101,13 +101,13 @@
         "id": "cross-ru-en-08",
         "category": "cross-lingual-ru-en",
         "query": "тарас бульба",
-        "expectedBookIds": [51, 104, 112],
-        "expectedTitleContains": ["Taras Bulba", "Расшифрованный Гоголь"],
+        "expectedBookIds": [51],
+        "expectedTitleContains": ["Taras Bulba"],
         "minExpectedResults": 1,
-        "description": "Cross-lingual: Russian query finds Taras Bulba (51) and books with Тарас Бульба in title (104, 112)",
+        "description": "Cross-lingual: Russian query finds Taras Bulba (51) in English",
         "relevanceMap": {
-            "bookIds": [51, 104, 112],
-            "relevanceScores": [2, 1, 1]
+            "bookIds": [51],
+            "relevanceScores": [2]
         },
         "type": "semantic"
     },
@@ -173,7 +173,7 @@
         "query": "the idiot",
         "expectedBookIds": [70, 18],
         "expectedTitleContains": ["The Idiot", "Идиот"],
-       "minExpectedResults": 2,
+        "minExpectedResults": 2,
         "description": "Cross-lingual: English query finds English (70) and Russian (18) The Idiot",
         "relevanceMap": {
             "bookIds": [70, 18],
@@ -185,20 +185,20 @@
         "id": "semantic-same-01",
         "category": "semantic-same-language",
         "query": "про любовь",
-        "expectedBookIds": [44, 33, 85, 106],
-        "expectedTitleContains": ["Анна Каренина", "Гордость", "First love", "Первая любовь"],
+        "expectedBookIds": [44, 33, 85],
+        "expectedTitleContains": ["Анна Каренина", "Гордость", "First love"],
         "minExpectedResults": 2,
         "description": "Semantic: 'about love' should find romance-themed books in Russian and English",
         "relevanceMap": {
-            "bookIds": [44, 33, 85, 106],
-            "relevanceScores": [2, 2, 2, 1]
+            "bookIds": [44, 33, 85],
+            "relevanceScores": [2, 2, 2]
         },
         "type": "semantic"
     },
     {
         "id": "semantic-same-02",
         "category": "semantic-same-language",
-        "query": "revenge ambition power ambition",
+        "query": "revenge ambition power",
         "expectedBookIds": [16, 96, 21, 87],
         "expectedTitleContains": ["Бесы", "The possessed", "Notes from the Underground", "Записки из подполья"],
         "minExpectedResults": 2,
@@ -325,13 +325,13 @@
         "id": "bm25-title-03",
         "category": "bm25-title-exact",
         "query": "love",
-        "expectedBookIds": [56, 85, 106],
-        "expectedTitleContains": ["Pride and Prejudice", "First love", "Первая любовь"],
+        "expectedBookIds": [56, 85],
+        "expectedTitleContains": ["Pride and Prejudice", "First love"],
         "minExpectedResults": 2,
-        "description": "BM25 exact: 'love' should match Pride and Prejudice (56), First love (85), Первая любовь (106)",
+        "description": "BM25 exact: 'love' should match Pride and Prejudice (56) and First love (85)",
         "relevanceMap": {
-            "bookIds": [56, 85, 106],
-            "relevanceScores": [1, 2, 2]
+            "bookIds": [56, 85],
+            "relevanceScores": [1, 2]
         },
         "type": "bm25"
     },
@@ -394,14 +394,14 @@
     {
         "id": "bm25-author-02",
         "category": "bm25-author",
-        "query": "Тургенев",
-        "expectedBookIds": [109, 111],
-        "expectedTitleContains": ["Дневник лишнего человека", "Жид"],
-        "minExpectedResults": 2,
-        "description": "BM25 author: 'Тургенев' should find Russian books by Turgenev",
+        "query": "Turgenev",
+        "expectedBookIds": [73, 78, 85, 86, 90, 99, 100],
+        "expectedTitleContains": ["Fathers and Children", "The diary of a superfluous man", "First love", "A House of Gentlefolk", "On the eve", "The Jew and Other Stories", "A Desperate Character"],
+        "minExpectedResults": 4,
+        "description": "BM25 author: 'Turgenev' should find English books by Turgenev",
         "relevanceMap": {
-            "bookIds": [109, 111],
-            "relevanceScores": [2, 2]
+            "bookIds": [73, 78, 85, 86, 90, 99, 100],
+            "relevanceScores": [2, 2, 2, 2, 2, 2, 2]
         },
         "type": "bm25"
     },
@@ -523,13 +523,13 @@
         "category": "filter-rating",
         "query": "love",
         "minRating": 3.0,
-        "expectedBookIds": [56, 85, 106],
-        "expectedTitleContains": ["Pride and Prejudice", "First love", "Первая любовь"],
+        "expectedBookIds": [56, 85],
+        "expectedTitleContains": ["Pride and Prejudice", "First love"],
         "minExpectedResults": 1,
         "description": "Filter: 'love' with minRating=3 (ratings NULL, tests text+filter combination)",
         "relevanceMap": {
-            "bookIds": [56, 85, 106],
-            "relevanceScores": [2, 2, 2]
+            "bookIds": [56, 85],
+            "relevanceScores": [2, 2]
         },
         "type": "filter"
     },

@@ -688,5 +688,145 @@
             "relevanceScores": [2, 2]
         },
         "type": "bm25"
+    },
+    {
+        "id": "bm25-typo-01",
+        "category": "bm25-typo",
+        "query": "талстой",
+        "expectedBookIds": [44, 45, 46, 47, 59, 63, 64, 69, 88],
+        "expectedTitleContains": ["Анна Каренина", "Воскресение", "Детство", "War and Peace", "Anna Karenina", "Childhood", "Resurrection", "Sebastopol"],
+        "minExpectedResults": 6,
+        "description": "BM25 typo: 'талстой' (a/o typo) should find ALL Tolstoy books in RU and EN via fuzziness:AUTO + difflib cutoff=0.7",
+        "relevanceMap": {
+            "bookIds": [44, 45, 46, 47, 59, 63, 64, 69, 88],
+            "relevanceScores": [2, 2, 2, 2, 2, 2, 2, 2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-typo-02",
+        "category": "bm25-typo",
+        "query": "тлстой",
+        "expectedBookIds": [44, 45, 46, 47, 59, 63, 64, 69, 88],
+        "expectedTitleContains": ["Анна Каренина", "War and Peace", "Anna Karenina"],
+        "minExpectedResults": 6,
+        "description": "BM25 typo: 'тлстой' (transposed letters) should find ALL Tolstoy books via fuzzy_transpositions:True",
+        "relevanceMap": {
+            "bookIds": [44, 45, 46, 47, 59, 63, 64, 69, 88],
+            "relevanceScores": [2, 2, 2, 2, 2, 2, 2, 2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-typo-03",
+        "category": "bm25-typo",
+        "query": "Достоевскй",
+        "expectedBookIds": [16, 17, 18, 20, 21, 68, 70, 71, 87, 96],
+        "expectedTitleContains": ["Бесы", "Братья Карамазовы", "Идиот", "Преступление и наказание", "Crime and Punishment", "The Idiot", "The Brothers Karamazov"],
+        "minExpectedResults": 6,
+        "description": "BM25 typo: 'Достоевскй' (last letter typo) should find ALL Dostoevsky books in RU and EN",
+        "relevanceMap": {
+            "bookIds": [16, 17, 18, 20, 21, 68, 70, 71, 87, 96],
+            "relevanceScores": [2, 2, 2, 2, 2, 2, 2, 2, 2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-typo-04",
+        "category": "bm25-typo",
+        "query": "Dostoevskyi",
+        "expectedBookIds": [68, 70, 71, 87, 96],
+        "expectedTitleContains": ["Crime and Punishment", "The Idiot", "The Brothers Karamazov", "Notes from the Underground", "The possessed"],
+        "minExpectedResults": 4,
+        "description": "BM25 typo: 'Dostoevskyi' (extra 'i') should find all EN Dostoevsky books via fuzziness:AUTO",
+        "relevanceMap": {
+            "bookIds": [68, 70, 71, 87, 96],
+            "relevanceScores": [2, 2, 2, 2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-typo-05",
+        "category": "bm25-typo",
+        "query": "приступление и наказание",
+        "expectedBookIds": [20, 68],
+        "expectedTitleContains": ["Преступление и наказание", "Crime and Punishment"],
+        "minExpectedResults": 2,
+        "description": "BM25 typo: 'приступление' (missing 'е') should find both RU (20) and EN (68) Crime and Punishment",
+        "relevanceMap": {
+            "bookIds": [20, 68],
+            "relevanceScores": [2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-typo-06",
+        "category": "bm25-typo",
+        "query": "Crime and Punnishment",
+        "expectedBookIds": [20, 68],
+        "expectedTitleContains": ["Crime and Punishment", "Преступление и наказание"],
+        "minExpectedResults": 2,
+        "description": "BM25 typo: 'Punnishment' (extra 'n') should find both EN (68) and RU (20) Crime and Punishment",
+        "relevanceMap": {
+            "bookIds": [68, 20],
+            "relevanceScores": [2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-typo-07",
+        "category": "bm25-typo",
+        "query": "Анна Карениа",
+        "expectedBookIds": [44, 59],
+        "expectedTitleContains": ["Анна Каренина", "Anna Karenina"],
+        "minExpectedResults": 2,
+        "description": "BM25 typo: 'Карениа' (missing 'н') should find both RU (44) and EN (59) Anna Karenina",
+        "relevanceMap": {
+            "bookIds": [44, 59],
+            "relevanceScores": [2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-typo-08",
+        "category": "bm25-typo",
+        "query": "Пушкн",
+        "expectedBookIds": [35, 37, 38, 48, 58, 66, 67, 79, 84],
+        "expectedTitleContains": ["Капитанская дочка", "Пиковая дама", "Повести Белкина", "Евгений Онегин"],
+        "minExpectedResults": 4,
+        "description": "BM25 typo: 'Пушкн' (missing 'и') should find ALL Pushkin books via difflib SYNONYM_MAP match",
+        "relevanceMap": {
+            "bookIds": [35, 37, 38, 48, 58, 66, 67, 79, 84],
+            "relevanceScores": [2, 2, 2, 2, 2, 2, 2, 2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-typo-09",
+        "category": "bm25-typo",
+        "query": "Гогл",
+        "expectedBookIds": [22, 24, 49, 51, 77, 83],
+        "expectedTitleContains": ["Мертвые души", "Ревизор", "Dead Souls", "Taras Bulba", "The Inspector-General"],
+        "minExpectedResults": 4,
+        "description": "BM25 typo: 'Гогл' (missing 'ь') should find ALL Gogol books via difflib SYNONYM_MAP match",
+        "relevanceMap": {
+            "bookIds": [22, 24, 49, 51, 77, 83],
+            "relevanceScores": [2, 2, 2, 2, 2, 2]
+        },
+        "type": "bm25"
+    },
+    {
+        "id": "bm25-typo-10",
+        "category": "bm25-typo",
+        "query": "Братья Карамазвы",
+        "expectedBookIds": [17, 71],
+        "expectedTitleContains": ["Братья Карамазовы", "The Brothers Karamazov"],
+        "minExpectedResults": 2,
+        "description": "BM25 typo: 'Карамазвы' (missing 'о') should find both RU (17) and EN (71) Brothers Karamazov",
+        "relevanceMap": {
+            "bookIds": [17, 71],
+            "relevanceScores": [2, 2]
+        },
+        "type": "bm25"
     }
 ]

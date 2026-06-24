@@ -23,6 +23,7 @@ KNN_NUM_CANDIDATES = int(os.getenv("KNN_NUM_CANDIDATES", "1000"))
 TOP_N = int(os.getenv("TOP_N", "20"))
 RERANK_TOP_K = int(os.getenv("RERANK_TOP_K", "20"))
 RERANK_MIN_SCORE_DELTA = float(os.getenv("RERANK_MIN_SCORE_DELTA", "0.001"))
+ASK_RELEVANCE_THRESHOLD = float(os.getenv("ASK_RELEVANCE_THRESHOLD", "1.0"))
 
 EMBED_MODE = os.getenv("EMBED_MODE", "local")
 EMBED_API_URL = os.getenv("EMBED_API_URL", "").rstrip("/")
@@ -178,6 +179,18 @@ def _detect_lang(text: str) -> str:
         if 'а' <= ch.lower() <= 'я':
             return "russian"
     return "english"
+
+
+def _get_no_relevant_msg(lang: str) -> str:
+    if lang == "english":
+        return "Sorry, no relevant passages were found for your question in this book."
+    return "Извините, по вашему вопросу не найдено релевантных отрывков в книге."
+
+
+def _get_not_about_book_msg(lang: str) -> str:
+    if lang == "english":
+        return "This question does not appear to be related to this book. Please ask a question about the book's content."
+    return "Этот вопрос не относится к данной книге. Пожалуйста, задайте вопрос по содержанию книги."
 
 
 class SearchRequest(BaseModel):
@@ -1017,6 +1030,7 @@ def _strip_markdown(text: str) -> str:
 def ask_book(req: AskBookRequest) -> AskBookResponse:
     if not req.question.strip():
         return AskBookResponse(answer="", sources=[])
+    question_lang = _detect_lang(req.question)
     meta = _fetch_book_metadata([req.book_id])
     book_meta = meta.get(str(req.book_id), {})
     meta_lines = []
@@ -1031,6 +1045,30 @@ def ask_book(req: AskBookRequest) -> AskBookResponse:
     meta_text = "\n".join(meta_lines) if meta_lines else ""
     sr = ContentSearchRequest(query=req.question, book_id=req.book_id, size=req.top_k)
     paragraphs = search_content(sr)
+
+    if not paragraphs or paragraphs[0].score < ASK_RELEVANCE_THRESHOLD:
+        return AskBookResponse(
+            answer=_get_no_relevant_msg(question_lang),
+            sources=[]
+        )
+
+    relevance_check_prompt = (
+        f"Book title: {book_meta.get('title', '')}\n"
+        f"Book author: {book_meta.get('author', '')}\n"
+        f"Book description: {book_meta.get('description', '')}\n\n"
+        f"Is the following question related to this book? Answer ONLY 'yes' or 'no'.\n"
+        f"Question: {req.question}"
+    )
+    relevance = _call_llm([
+        {"role": "system", "content": "You are a relevance checker. Answer only 'yes' or 'no'."},
+        {"role": "user", "content": relevance_check_prompt},
+    ])
+    if "no" in relevance.strip().lower()[:3]:
+        return AskBookResponse(
+            answer=_get_not_about_book_msg(question_lang),
+            sources=[]
+        )
+
     context_parts = []
     sources = []
     for p in paragraphs:

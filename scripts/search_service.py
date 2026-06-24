@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import re
 import tempfile
 import time
 from pathlib import Path
@@ -22,12 +23,18 @@ KNN_NUM_CANDIDATES = int(os.getenv("KNN_NUM_CANDIDATES", "1000"))
 TOP_N = int(os.getenv("TOP_N", "20"))
 RERANK_TOP_K = int(os.getenv("RERANK_TOP_K", "20"))
 RERANK_MIN_SCORE_DELTA = float(os.getenv("RERANK_MIN_SCORE_DELTA", "0.001"))
+ASK_RELEVANCE_THRESHOLD = float(os.getenv("ASK_RELEVANCE_THRESHOLD", "1.0"))
 
 EMBED_MODE = os.getenv("EMBED_MODE", "local")
 EMBED_API_URL = os.getenv("EMBED_API_URL", "").rstrip("/")
 EMBED_API_KEY = os.getenv("EMBED_API_KEY", "")
 EMBED_API_MODEL = os.getenv("EMBED_API_MODEL", "text-embedding-ada-002")
 BOOKS_INDEX = os.getenv("BOOKS_INDEX", "books_api" if EMBED_MODE == "api" else "books")
+
+LLM_API_URL = os.getenv("LLM_API_URL", EMBED_API_URL).rstrip("/")
+LLM_API_KEY = os.getenv("LLM_API_KEY", EMBED_API_KEY)
+LLM_MODEL = os.getenv("LLM_MODEL", "deepseek/deepseek-v4-flash")
+LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "512"))
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("search_service")
@@ -94,6 +101,29 @@ SYNONYM_MAP: Dict[str, str] = {
     "frankenstein": "франкенштейн", "франкенштейн": "frankenstein",
     "orwell": "оруэлл", "оруэлл": "orwell",
     "huxley": "хаксли", "хаксли": "huxley",
+    "defoe": "дефо", "дефо": "defoe",
+    "baum": "баум", "баум": "baum",
+    "austen": "остин", "остин": "austen",
+    "dostoevskii": "dostoevsky",
+    "dostoyevskiy": "dostoyevsky",
+    "dostojevskij": "dostoyevsky",
+    "tolstoi": "tolstoy",
+    "tolstoj": "tolstoy",
+    "turgeneff": "turgenev",
+    "gogolj": "gogol",
+    "chekov": "chekhov",
+    "lermontoff": "lermontov",
+    "goncharoff": "goncharov",
+    "shekspir": "shakespeare",
+    "dikkens": "dickens",
+    "uayld": "wilde",
+    "servantes": "cervantes",
+    "cervantes": "сервантес", "сервантес": "cervantes",
+    "byron": "байрон", "байрон": "byron",
+    "wells": "уэллс", "уэллс": "wells",
+    "verne": "верн", "верн": "verne",
+    "jane": "джейн", "джейн": "jane",
+    "ostin": "austen",
 }
 
 
@@ -120,7 +150,7 @@ def _fuzzy_synonym_match(text: str) -> str:
         cleaned = w.strip(".,!?;:\"'()[]{}").lower()
         if not cleaned:
             continue
-        matches = difflib.get_close_matches(cleaned, SYNONYM_MAP.keys(), n=1, cutoff=0.8)
+        matches = difflib.get_close_matches(cleaned, SYNONYM_MAP.keys(), n=1, cutoff=0.7)
         if matches:
             synonym = SYNONYM_MAP[matches[0]]
             if synonym.lower() != cleaned.lower():
@@ -149,6 +179,18 @@ def _detect_lang(text: str) -> str:
         if 'а' <= ch.lower() <= 'я':
             return "russian"
     return "english"
+
+
+def _get_no_relevant_msg(lang: str) -> str:
+    if lang == "english":
+        return "Sorry, no relevant passages were found for your question in this book."
+    return "Извините, по вашему вопросу не найдено релевантных отрывков в книге."
+
+
+def _get_not_about_book_msg(lang: str) -> str:
+    if lang == "english":
+        return "This question does not appear to be related to this book. Please ask a question about the book's content."
+    return "Этот вопрос не относится к данной книге. Пожалуйста, задайте вопрос по содержанию книги."
 
 
 class SearchRequest(BaseModel):
@@ -201,6 +243,17 @@ class ContentSearchResult(BaseModel):
     paragraph_index: int = 0
     text_snippet: str = ""
     score: float = 0.0
+
+
+class AskBookRequest(BaseModel):
+    question: str
+    book_id: str
+    top_k: int = 10
+
+
+class AskBookResponse(BaseModel):
+    answer: str
+    sources: list[dict[str, Any]] = []
 
 
 @app.get("/healthz")
@@ -411,10 +464,9 @@ def bm25_top_n(req: SearchRequest, size: int) -> List[BookDoc]:
             {"match_phrase": {"author": {"query": query_text, "boost": 40, "slop": 2}}},
         ]
 
-        if req.query and len(req.query.strip().split()) == 1:
-            should.append({"match": {"title": {"query": req.query, "boost": 3, "fuzziness": 1}}})
-            should.append({"match": {"author": {"query": req.query, "boost": 2, "fuzziness": 1}}})
-        
+        if req.query and len(req.query.strip().split()) <= 2:
+            should.append({"match": {"title": {"query": req.query, "boost": 3, "fuzziness": 1, "prefix_length": 1}}})
+            should.append({"match": {"author": {"query": req.query, "boost": 2, "fuzziness": 1, "prefix_length": 1}}})
 
         cross_lingual_words = _extract_synonyms_only(query_text)
         if cross_lingual_words:
@@ -422,7 +474,7 @@ def bm25_top_n(req: SearchRequest, size: int) -> List[BookDoc]:
                 "match_phrase": {
                     "author": {
                         "query": cross_lingual_words,
-                        "boost": 40,
+                        "boost": 15,
                         "slop": 2,
                     }
                 }
@@ -430,7 +482,7 @@ def bm25_top_n(req: SearchRequest, size: int) -> List[BookDoc]:
             should.append({
                 "multi_match": {
                     "query": cross_lingual_words,
-                    "fields": ["title^80", "author^10"],
+                    "fields": ["title^20", "author^10"],
                     "type": "best_fields",
                 }
             })
@@ -740,6 +792,15 @@ def search_books(req: SearchRequest) -> List[BookDoc]:
 
     if is_simple:
         docs = bm25[:TOP_N]
+        if len(bm25) < 3 and req.query:
+            import difflib
+            q = req.query.strip().lower()
+            if difflib.get_close_matches(q, SYNONYM_MAP.keys(), n=1, cutoff=0.6):
+                fallback_req = SearchRequest(
+                    query=req.query,
+                    title=None, author=None, genre=None, description=None,
+                )
+                docs = bm25_top_n(fallback_req, BM25_SIZE)[:TOP_N]
     else:
         try:
             knn = knn_top_n(expanded, KNN_K, KNN_NUM_CANDIDATES)
@@ -892,6 +953,8 @@ def _fetch_book_metadata(book_ids: List[str]) -> Dict[str, Dict[str, str]]:
                 result[str(bid)] = {
                     "title": src.get("title", ""),
                     "author": src.get("author", ""),
+                    "description": src.get("description", ""),
+                    "genres": src.get("genres", ""),
                 }
         return result
     except Exception:
@@ -927,6 +990,118 @@ def search_content(req: ContentSearchRequest) -> List[ContentSearchResult]:
             score=r.get("score", 0.0),
         ))
     return results
+
+
+def _call_llm(messages: list[dict[str, str]]) -> str:
+    if not LLM_API_URL:
+        return "LLM API not configured"
+    headers = {"Content-Type": "application/json"}
+    if LLM_API_KEY:
+        headers["Authorization"] = f"Bearer {LLM_API_KEY}"
+    payload = {
+        "model": LLM_MODEL,
+        "messages": messages,
+        "max_tokens": LLM_MAX_TOKENS,
+    }
+    try:
+        url = f"{LLM_API_URL}/chat/completions"
+        resp = requests.post(url, json=payload, headers=headers, timeout=60)
+        resp.raise_for_status()
+        data = resp.json()
+        return data["choices"][0]["message"]["content"]
+    except Exception as e:
+        log.warning("LLM call failed: %s", e)
+        return f"Failed to get answer: {e}"
+
+
+def _strip_markdown(text: str) -> str:
+    text = re.sub(r"\*\*\*(.+?)\*\*\*", r"\1", text)
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+    text = re.sub(r"\*(.+?)\*", r"\1", text)
+    text = re.sub(r"`(.+?)`", r"\1", text)
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+    text = re.sub(r"\n-{3,}\n", "\n", text)
+    lines = [line.strip() for line in text.split("\n")]
+    return "\n".join(lines).strip()
+
+
+@app.post("/ask-book", response_model=AskBookResponse)
+def ask_book(req: AskBookRequest) -> AskBookResponse:
+    if not req.question.strip():
+        return AskBookResponse(answer="", sources=[])
+    question_lang = _detect_lang(req.question)
+    meta = _fetch_book_metadata([req.book_id])
+    book_meta = meta.get(str(req.book_id), {})
+    meta_lines = []
+    if book_meta.get("title"):
+        meta_lines.append(f"Название: {book_meta['title']}")
+    if book_meta.get("author"):
+        meta_lines.append(f"Автор: {book_meta['author']}")
+    if book_meta.get("description"):
+        meta_lines.append(f"Описание: {book_meta['description']}")
+    if book_meta.get("genres"):
+        meta_lines.append(f"Жанры: {book_meta['genres']}")
+    meta_text = "\n".join(meta_lines) if meta_lines else ""
+    sr = ContentSearchRequest(query=req.question, book_id=req.book_id, size=req.top_k)
+    paragraphs = search_content(sr)
+
+    if not paragraphs or paragraphs[0].score < ASK_RELEVANCE_THRESHOLD:
+        return AskBookResponse(
+            answer=_get_no_relevant_msg(question_lang),
+            sources=[]
+        )
+
+    relevance_check_prompt = (
+        f"Book title: {book_meta.get('title', '')}\n"
+        f"Book author: {book_meta.get('author', '')}\n"
+        f"Book description: {book_meta.get('description', '')}\n\n"
+        f"Is the following question related to this book? Answer ONLY 'yes' or 'no'.\n"
+        f"Question: {req.question}"
+    )
+    relevance = _call_llm([
+        {"role": "system", "content": "You are a relevance checker. Answer only 'yes' or 'no'."},
+        {"role": "user", "content": relevance_check_prompt},
+    ])
+    if "no" in relevance.strip().lower()[:3]:
+        return AskBookResponse(
+            answer=_get_not_about_book_msg(question_lang),
+            sources=[]
+        )
+
+    context_parts = []
+    sources = []
+    for p in paragraphs:
+        ctx = f"[{p.chapter} | абзац {p.paragraph_index}]\n{p.text_snippet}"
+        context_parts.append(ctx)
+        sources.append({
+            "book_id": p.book_id,
+            "chapter": p.chapter,
+            "chapter_index": p.chapter_index,
+            "paragraph_index": p.paragraph_index,
+            "text_snippet": p.text_snippet,
+        })
+    full_context_parts = []
+    if meta_text:
+        full_context_parts.append("Информация о книге:\n" + meta_text)
+    if context_parts:
+        full_context_parts.append("Отрывки из книги:\n" + "\n\n".join(context_parts))
+    if not full_context_parts:
+        return AskBookResponse(answer="No relevant content or metadata found for this book.", sources=[])
+    full_context = "\n\n".join(full_context_parts)
+    system_prompt = (
+        "Ты — полезный ассистент, отвечающий на вопросы о книге. "
+        "Используй информацию о книге (название, автор, описание, жанры) и предоставленные отрывки из текста, "
+        "чтобы дать развёрнутый и точный ответ. Если отрывков недостаточно, опирайся на описание книги. "
+        "Отвечай на языке вопроса."
+    )
+    user_prompt = f"{full_context}\n\nВопрос: {req.question}"
+    answer = _call_llm([
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ])
+    answer = _strip_markdown(answer)
+    return AskBookResponse(answer=answer, sources=sources)
 
 
 @app.post("/search/reviews")

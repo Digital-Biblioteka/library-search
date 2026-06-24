@@ -49,4 +49,4 @@ EXPOSE 8001
 HEALTHCHECK --interval=10s --timeout=5s --retries=10 --start-period=60s \
     CMD curl -fsS http://localhost:8001/healthz || exit 1
 
-CMD ["uvicorn", "scripts.search_service:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "scripts.search_service:app", "--host", "0.0.0.0", "--port", "8001", "--log-level", "warning"]
